@@ -12,8 +12,13 @@ export default function HomePage() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        const dashPath = user.role === 'admin' ? '/admin' : user.role === 'pedagogo' ? '/pedagogo' : '/professor';
-        router.push(dashPath);
+        if (user.role === 'admin') {
+          router.push('/admin');
+        } else if (user.role === 'pedagogo') {
+          router.push('/pedagogo');
+        } else {
+          router.push('/professor/acesso');
+        }
       } else {
         router.push('/login');
       }

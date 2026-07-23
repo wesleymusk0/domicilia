@@ -148,6 +148,7 @@ export interface ConfiguracaoGlobal {
   iaProvider: string;
   iaApiKey: string;
   iaModelo: string;
+  senhaProfessor: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -34,6 +34,7 @@ export default function ConfiguracoesAdminPage() {
           assinaturaEmail: 'Atenciosamente,\nSistema de Atividades Domiciliares',
           emailDestinoNotificacoes: 'provasmaluf@gmail.com', iaHabilitada: false,
           iaProvider: 'llm7', iaApiKey: '', iaModelo: 'gpt-3.5-turbo',
+          senhaProfessor: 'professor123',
           createdAt: '', updatedAt: '',
         });
       }
@@ -78,6 +79,9 @@ export default function ConfiguracoesAdminPage() {
           <Input label="Intervalo entre Tentativas IA (minutos)" type="number" value={config?.intervaloIA || 15} onChange={(e) => setConfig({ ...config!, intervaloIA: parseInt(e.target.value) || 15 })} />
           <Input label="Maximo de Tentativas IA" type="number" value={config?.maxTentativasIA || 5} onChange={(e) => setConfig({ ...config!, maxTentativasIA: parseInt(e.target.value) || 5 })} />
           <Input label="Chave API (opcional para LLM7 free)" value={config?.iaApiKey || ''} onChange={(e) => setConfig({ ...config!, iaApiKey: e.target.value })} placeholder="Deixe vazio para uso gratuito" />
+        </CardContent></Card>
+        <Card><CardHeader><h3 className="text-lg font-semibold text-gray-900">Acesso do Professor</h3></CardHeader><CardContent className="space-y-4">
+          <Input label="Senha de Acesso do Professor" type="password" value={config?.senhaProfessor || 'professor123'} onChange={(e) => setConfig({ ...config!, senhaProfessor: e.target.value })} helperText="Senha que os professores usarao para acessar o sistema" />
         </CardContent></Card>
         <Card><CardHeader><h3 className="text-lg font-semibold text-gray-900">E-mails</h3></CardHeader><CardContent className="space-y-4">
           <Input label="E-mail de Notificacoes" type="email" value={config?.emailDestinoNotificacoes || ''} onChange={(e) => setConfig({ ...config!, emailDestinoNotificacoes: e.target.value })} placeholder="email@exemplo.com" />
