@@ -6,8 +6,7 @@ import ProfessorLayout from '@/components/layout/ProfessorLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PageLoading } from '@/components/ui/Loading';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
-import { Turma, Envio, Aluno } from '@/types';
+import { Envio, Aluno } from '@/types';
 
 interface Stats {
   totalAlunos: number;
@@ -17,7 +16,7 @@ interface Stats {
 
 export default function ProfessorDashboard() {
   const router = useRouter();
-  const [turma, setTurma] = useState<Turma | null>(null);
+  const [turma, setTurma] = useState<any>(null);
   const [stats, setStats] = useState<Stats>({ totalAlunos: 0, enviosEnviados: 0, enviosPendentes: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -32,20 +31,23 @@ export default function ProfessorDashboard() {
     loadStats(turmaParsed);
   }, []);
 
-  const loadStats = async (turma: Turma) => {
+  const loadStats = async (turma: any) => {
     try {
-      const [todosAlunos, todosEnvios] = await Promise.all([
-        FirestoreService.getAllByType<Aluno>(DOC_TYPES.ALUNO),
-        FirestoreService.getAllByType<Envio>(DOC_TYPES.ENVIO),
+      const [alunosRes, enviosRes] = await Promise.all([
+        fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=alunos`),
+        fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=envios`),
       ]);
 
-      const alunosDaTurma = todosAlunos.filter((a) => a.turmaId === turma.id);
-      const enviosDaTurma = todosEnvios.filter((e) => e.turmaId === turma.id);
+      const alunosData = await alunosRes.json();
+      const enviosData = await enviosRes.json();
+
+      const alunos = alunosData.data || [];
+      const envios = enviosData.data || [];
 
       setStats({
-        totalAlunos: alunosDaTurma.length,
-        enviosEnviados: enviosDaTurma.filter((e) => e.status === 'enviado').length,
-        enviosPendentes: enviosDaTurma.filter((e) => e.status === 'pendente').length,
+        totalAlunos: alunos.length,
+        enviosEnviados: envios.filter((e: Envio) => e.status === 'enviado').length,
+        enviosPendentes: envios.filter((e: Envio) => e.status === 'pendente').length,
       });
     } catch (err) {
       console.error('Erro ao carregar estatisticas:', err);

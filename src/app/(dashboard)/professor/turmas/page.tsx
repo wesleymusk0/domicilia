@@ -8,7 +8,6 @@ import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageLoading } from '@/components/ui/Loading';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { Aluno, Envio } from '@/types';
 
 interface AlunoComStatus extends Aluno {
@@ -34,15 +33,20 @@ export default function TurmaAlunosPage() {
 
   const loadAlunos = async (turma: any) => {
     try {
-      const [todosAlunos, todosEnvios] = await Promise.all([
-        FirestoreService.getAllByType<Aluno>(DOC_TYPES.ALUNO),
-        FirestoreService.getAllByType<Envio>(DOC_TYPES.ENVIO),
+      const [alunosRes, enviosRes] = await Promise.all([
+        fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=alunos`),
+        fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=envios`),
       ]);
 
-      const alunosDaTurma = todosAlunos.filter((a) => a.turmaId === turma.id);
-      const alunosComStatus: AlunoComStatus[] = alunosDaTurma.map((aluno) => {
-        const alunoEnvios = todosEnvios.filter((e) => e.alunoId === aluno.id && e.turmaId === turma.id);
-        const temPendencia = alunoEnvios.length === 0 || alunoEnvios.some((e) => e.status === 'pendente');
+      const alunosData = await alunosRes.json();
+      const enviosData = await enviosRes.json();
+
+      const alunosDaTurma = alunosData.data || [];
+      const enviosDaTurma = enviosData.data || [];
+
+      const alunosComStatus: AlunoComStatus[] = alunosDaTurma.map((aluno: Aluno) => {
+        const alunoEnvios = enviosDaTurma.filter((e: Envio) => e.alunoId === aluno.id);
+        const temPendencia = alunoEnvios.length === 0 || alunoEnvios.some((e: Envio) => e.status === 'pendente');
         return { ...aluno, hasPending: temPendencia };
       });
 

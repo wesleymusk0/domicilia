@@ -9,10 +9,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { PageLoading } from '@/components/ui/Loading';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { storageProvider, validateFile, generateStoragePath } from '@/lib/services/storage';
-import { emailService } from '@/lib/services/email';
-import { Aluno, Turma, Envio, Historico } from '@/types';
+import { Aluno, Turma } from '@/types';
 import { getCurrentDate, getCurrentTime } from '@/lib/utils';
 
 function EnviarAtividadeContent() {
@@ -44,12 +42,16 @@ function EnviarAtividadeContent() {
 
   const loadData = async () => {
     try {
-      const [alunoData, turmaData] = await Promise.all([
-        FirestoreService.getById<Aluno>(alunoId),
-        FirestoreService.getById<Turma>(turmaId),
+      const [alunoRes, turmaRes] = await Promise.all([
+        fetch(`/api/professor/documento?id=${alunoId}&tipo=aluno`),
+        fetch(`/api/professor/documento?id=${turmaId}&tipo=turma`),
       ]);
-      setAluno(alunoData);
-      setTurma(turmaData);
+
+      const alunoData = await alunoRes.json();
+      const turmaData = await turmaRes.json();
+
+      if (alunoData.success) setAluno(alunoData.data);
+      if (turmaData.success) setTurma(turmaData.data);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -89,7 +91,7 @@ function EnviarAtividadeContent() {
         turmaId,
         disciplina: formData.disciplina,
         versao: 1,
-        status: 'enviado' as const,
+        status: 'enviado',
         arquivo: fileUpload,
         comentarios: formData.comentarios,
         dataEnvio: getCurrentDate(),
@@ -101,22 +103,36 @@ function EnviarAtividadeContent() {
         professorEmail: '',
       };
 
-      const envioId = await FirestoreService.create<Envio>(DOC_TYPES.ENVIO, envioData);
+      // Salva envio
+      const envioRes = await fetch('/api/professor/documento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'envio', data: envioData }),
+      });
+      const envioResult = await envioRes.json();
 
-      await FirestoreService.create<Historico>(DOC_TYPES.HISTORICO, {
-        envioId,
-        versao: 1,
-        arquivo: fileUpload,
-        comentarios: formData.comentarios,
-        dataEnvio: getCurrentDate(),
-        horaEnvio: getCurrentTime(),
-        professorId: envioData.professorId,
-        professorNome: envioData.professorNome,
-        alunoId,
-        alunoNome: aluno?.nome || '',
-        turmaId,
-        turmaNome: turma?.nome || '',
-        disciplina: formData.disciplina,
+      // Salva historico
+      await fetch('/api/professor/documento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'historico',
+          data: {
+            envioId: envioResult.id,
+            versao: 1,
+            arquivo: fileUpload,
+            comentarios: formData.comentarios,
+            dataEnvio: getCurrentDate(),
+            horaEnvio: getCurrentTime(),
+            professorId: envioData.professorId,
+            professorNome: envioData.professorNome,
+            alunoId,
+            alunoNome: aluno?.nome || '',
+            turmaId,
+            turmaNome: turma?.nome || '',
+            disciplina: formData.disciplina,
+          },
+        }),
       });
 
       setSuccess(true);

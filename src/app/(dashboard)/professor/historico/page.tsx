@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageLoading } from '@/components/ui/Loading';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { Historico } from '@/types';
 import { formatFileSize } from '@/lib/utils';
 
@@ -29,11 +28,12 @@ export default function HistoricoProfessorPage() {
 
   const loadHistorico = async (turma: any) => {
     try {
-      const todosHistoricos = await FirestoreService.getAllByType<Historico>(DOC_TYPES.HISTORICO);
-      const historicoDaTurma = todosHistoricos
-        .filter((h) => h.turmaId === turma.id)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setHistorico(historicoDaTurma);
+      const res = await fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=historico`);
+      const data = await res.json();
+      const sorted = (data.data || []).sort(
+        (a: Historico, b: Historico) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setHistorico(sorted);
     } catch (error) {
       console.error('Erro ao carregar historico:', error);
     } finally {

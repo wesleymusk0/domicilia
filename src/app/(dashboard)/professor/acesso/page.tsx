@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { Turma } from '@/types';
 
 export default function ProfessorAcessoPage() {
@@ -22,25 +21,19 @@ export default function ProfessorAcessoPage() {
     setLoading(true);
 
     try {
-      // Busca a configuracao para validar a senha
-      const configs = await FirestoreService.getAllByType<any>(DOC_TYPES.CONFIGURACAO);
-      
-      if (configs.length === 0) {
-        throw new Error('Sistema nao configurado. Contate o administrador.');
+      const response = await fetch('/api/professor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senha }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao acessar');
       }
 
-      const config = configs[0];
-      
-      // Senha do professor (configuravel no admin)
-      const senhaProfessor = config.senhaProfessor || 'professor123';
-
-      if (senha !== senhaProfessor) {
-        throw new Error('Senha incorreta');
-      }
-
-      // Busca todas as turmas
-      const todasTurmas = await FirestoreService.getAllByType<Turma>(DOC_TYPES.TURMA);
-      setTurmas(todasTurmas);
+      setTurmas(data.turmas);
       setAcessou(true);
     } catch (err: any) {
       setError(err.message || 'Erro ao acessar');
@@ -50,7 +43,6 @@ export default function ProfessorAcessoPage() {
   };
 
   const handleSelecionarTurma = (turma: Turma) => {
-    // Salva a turma selecionada no sessionStorage
     sessionStorage.setItem('professorTurma', JSON.stringify(turma));
     router.push('/professor/turmas');
   };
@@ -90,9 +82,7 @@ export default function ProfessorAcessoPage() {
           )}
 
           <div className="mt-6 text-center">
-            <Button variant="outline" onClick={() => { setAcessou(false); setTurmas([]); }}>
-              Voltar
-            </Button>
+            <Button variant="outline" onClick={() => { setAcessou(false); setTurmas([]); }}>Voltar</Button>
           </div>
         </div>
       </div>
@@ -108,25 +98,12 @@ export default function ProfessorAcessoPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleAcessar} className="space-y-4">
-            <Input
-              label="Senha de Acesso"
-              type="password"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              placeholder="Digite a senha"
-              required
-            />
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
-            )}
-            <Button type="submit" className="w-full" loading={loading}>
-              Acessar
-            </Button>
+            <Input label="Senha de Acesso" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Digite a senha" required />
+            {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
+            <Button type="submit" className="w-full" loading={loading}>Acessar</Button>
           </form>
           <div className="mt-4 text-center">
-            <a href="/login" className="text-sm text-blue-600 hover:underline">
-              Login administrativo
-            </a>
+            <a href="/login" className="text-sm text-blue-600 hover:underline">Login administrativo</a>
           </div>
         </CardContent>
       </Card>
