@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regra unica: colecao domicilia
+    // Permissoes abertas para desenvolvimento
+    // PRODUCAO: restritir conforme necessario
+    match /domicilia/{docId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
