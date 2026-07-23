@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebase/admin';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+};
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
 
 function corsHeaders() {
   return {
@@ -26,22 +36,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
-
     if (tipo === 'alunos') {
-      const snap = await db.collection('domicilia').where('type', '==', 'aluno').where('turmaId', '==', turmaId).get();
+      const q = query(collection(db, 'domicilia'), where('type', '==', 'aluno'), where('turmaId', '==', turmaId));
+      const snap = await getDocs(q);
       const alunos = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       return NextResponse.json({ success: true, data: alunos }, { headers: corsHeaders() });
     }
 
     if (tipo === 'envios') {
-      const snap = await db.collection('domicilia').where('type', '==', 'envio').where('turmaId', '==', turmaId).get();
+      const q = query(collection(db, 'domicilia'), where('type', '==', 'envio'), where('turmaId', '==', turmaId));
+      const snap = await getDocs(q);
       const envios = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       return NextResponse.json({ success: true, data: envios }, { headers: corsHeaders() });
     }
 
     if (tipo === 'historico') {
-      const snap = await db.collection('domicilia').where('type', '==', 'historico').where('turmaId', '==', turmaId).get();
+      const q = query(collection(db, 'domicilia'), where('type', '==', 'historico'), where('turmaId', '==', turmaId));
+      const snap = await getDocs(q);
       const historico = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       return NextResponse.json({ success: true, data: historico }, { headers: corsHeaders() });
     }

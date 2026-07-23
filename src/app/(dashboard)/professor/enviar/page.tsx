@@ -37,21 +37,29 @@ function EnviarAtividadeContent() {
       router.push('/professor/acesso');
       return;
     }
-    if (turmaId && alunoId) loadData();
-  }, [turmaId, alunoId]);
+    if (turmaId && alunoId) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   const loadData = async () => {
     try {
       const [alunoRes, turmaRes] = await Promise.all([
-        fetch(`/api/professor/documento?id=${alunoId}&tipo=aluno`),
-        fetch(`/api/professor/documento?id=${turmaId}&tipo=turma`),
+        fetch(`/api/professor/documento?id=${alunoId}`),
+        fetch(`/api/professor/documento?id=${turmaId}`),
       ]);
 
-      const alunoData = await alunoRes.json();
-      const turmaData = await turmaRes.json();
+      if (alunoRes.ok) {
+        const alunoData = await alunoRes.json();
+        if (alunoData.success) setAluno(alunoData.data);
+      }
 
-      if (alunoData.success) setAluno(alunoData.data);
-      if (turmaData.success) setTurma(turmaData.data);
+      if (turmaRes.ok) {
+        const turmaData = await turmaRes.json();
+        if (turmaData.success) setTurma(turmaData.data);
+      }
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -103,7 +111,6 @@ function EnviarAtividadeContent() {
         professorEmail: '',
       };
 
-      // Salva envio
       const envioRes = await fetch('/api/professor/documento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -111,7 +118,6 @@ function EnviarAtividadeContent() {
       });
       const envioResult = await envioRes.json();
 
-      // Salva historico
       await fetch('/api/professor/documento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -150,7 +156,7 @@ function EnviarAtividadeContent() {
     <ProfessorLayout>
       <PageHeader title="Enviar Atividade" description={aluno ? `Enviar para ${aluno.nome}` : ''} actions={<Button variant="outline" onClick={() => router.back()}>Voltar</Button>} />
       {success ? (
-        <Card className="max-w-2xl"><div className="text-center py-12"><div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4"><span className="text-3xl">✓</span></div><h3 className="text-lg font-medium text-gray-900">Atividade Enviada!</h3></div></Card>
+        <Card className="max-w-2xl"><div className="text-center py-12"><div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4"><span className="text-3xl text-green-600">✓</span></div><h3 className="text-lg font-medium text-gray-900">Atividade Enviada!</h3></div></Card>
       ) : (
         <Card className="max-w-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">

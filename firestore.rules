@@ -1,12 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Regra unica: colecao domicilia
-    // Permissoes abertas para desenvolvimento
-    // PRODUCAO: restritir conforme necessario
     match /domicilia/{docId} {
-      allow read, write: if request.auth != null;
+      // Leitura liberada (para APIs do professor)
+      allow read: if true;
+      // Escrita apenas com auth (admin/pedagogo)
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
     }
   }
 }

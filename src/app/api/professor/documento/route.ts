@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, doc, getDoc, addDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+};
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
 
 function corsHeaders() {
   return {
@@ -26,10 +35,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
-    const docSnap = await db.collection('domicilia').doc(id).get();
+    const docRef = doc(db, 'domicilia', id);
+    const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists) {
+    if (!docSnap.exists()) {
       return NextResponse.json(
         { error: 'Documento nao encontrado' },
         { status: 404, headers: corsHeaders() }
@@ -41,7 +50,7 @@ export async function GET(request: NextRequest) {
       { headers: corsHeaders() }
     );
   } catch (error: any) {
-    console.error('Erro na API:', error);
+    console.error('Erro na API GET:', error);
     return NextResponse.json(
       { error: error.message || 'Erro interno' },
       { status: 500, headers: corsHeaders() }
@@ -60,10 +69,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
     const timestamp = new Date().toISOString();
-
-    const docRef = await db.collection('domicilia').add({
+    const docRef = await addDoc(collection(db, 'domicilia'), {
       ...data,
       type: tipo,
       createdAt: timestamp,
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
       { headers: corsHeaders() }
     );
   } catch (error: any) {
-    console.error('Erro na API:', error);
+    console.error('Erro na API POST:', error);
     return NextResponse.json(
       { error: error.message || 'Erro interno' },
       { status: 500, headers: corsHeaders() }
