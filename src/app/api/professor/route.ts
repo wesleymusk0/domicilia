@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-};
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+import { getAdminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 function corsHeaders() {
   return {
@@ -26,9 +17,9 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const { senha } = await request.json();
+    const db = getAdminDb();
 
-    const configQuery = query(collection(db, 'domicilia'), where('type', '==', 'configuracao'));
-    const configSnap = await getDocs(configQuery);
+    const configSnap = await db.collection('domicilia').where('type', '==', 'configuracao').get();
 
     if (configSnap.empty) {
       return NextResponse.json(
@@ -47,8 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const turmasQuery = query(collection(db, 'domicilia'), where('type', '==', 'turma'));
-    const turmasSnap = await getDocs(turmasQuery);
+    const turmasSnap = await db.collection('domicilia').where('type', '==', 'turma').get();
     const turmas = turmasSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json(

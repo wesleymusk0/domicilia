@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, doc, getDoc, setDoc } from 'firebase/firestore';
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-};
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+import { getAdminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 function corsHeaders() {
   return {
@@ -35,10 +26,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const docRef = doc(db, 'domicilia', id);
-    const docSnap = await getDoc(docRef);
+    const db = getAdminDb();
+    const docSnap = await db.collection('domicilia').doc(id).get();
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return NextResponse.json(
         { error: 'Documento nao encontrado' },
         { status: 404, headers: corsHeaders() }
@@ -69,9 +60,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const db = getAdminDb();
     const timestamp = new Date().toISOString();
-    const docRef = doc(collection(db, 'domicilia'));
-    await setDoc(docRef, {
+
+    const docRef = await db.collection('domicilia').add({
       ...data,
       type: tipo,
       createdAt: timestamp,
