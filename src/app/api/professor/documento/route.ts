@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, setDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -11,27 +11,50 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const tipo = searchParams.get('tipo');
 
-    if (!id || !tipo) {
-      return NextResponse.json({ error: 'id e tipo obrigatorios' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json(
+        { error: 'id obrigatorio' },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     const docRef = doc(db, 'domicilia', id);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      return NextResponse.json({ error: 'Documento nao encontrado' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Documento nao encontrado' },
+        { status: 404, headers: corsHeaders() }
+      );
     }
 
-    return NextResponse.json({ success: true, data: { id: docSnap.id, ...docSnap.data() } });
+    return NextResponse.json(
+      { success: true, data: { id: docSnap.id, ...docSnap.data() } },
+      { headers: corsHeaders() }
+    );
   } catch (error: any) {
     console.error('Erro na API:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Erro interno' },
+      { status: 500, headers: corsHeaders() }
+    );
   }
 }
 
@@ -40,7 +63,10 @@ export async function POST(request: NextRequest) {
     const { tipo, data } = await request.json();
 
     if (!tipo || !data) {
-      return NextResponse.json({ error: 'tipo e data obrigatorios' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'tipo e data obrigatorios' },
+        { status: 400, headers: corsHeaders() }
+      );
     }
 
     const timestamp = new Date().toISOString();
@@ -52,9 +78,15 @@ export async function POST(request: NextRequest) {
       updatedAt: timestamp,
     });
 
-    return NextResponse.json({ success: true, id: docRef.id });
+    return NextResponse.json(
+      { success: true, id: docRef.id },
+      { headers: corsHeaders() }
+    );
   } catch (error: any) {
     console.error('Erro na API:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Erro interno' },
+      { status: 500, headers: corsHeaders() }
+    );
   }
 }
