@@ -48,9 +48,6 @@ export class AuthService {
       name,
       role,
       active: true,
-      domiciliar: false,
-      dataInicio: '',
-      dataFim: '',
     });
 
     return firebaseUser.uid;
