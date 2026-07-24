@@ -1,4 +1,5 @@
-import { ConfiguracaoGlobal } from '@/types';
+import { ConfiguracaoGlobal, ConteudoIA } from '@/types';
+import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
 
 export interface AIProvider {
   generateActivity(prompt: string, config: ConfiguracaoGlobal): Promise<string>;
@@ -8,6 +9,7 @@ interface QueueItem {
   id: string;
   prompt: string;
   config: ConfiguracaoGlobal;
+  conteudo?: ConteudoIA;
   attempts: number;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: string;
@@ -30,13 +32,27 @@ class LLM7Provider implements AIProvider {
         messages: [
           {
             role: 'system',
-            content:
-              'Você é um professor experiente. Gere atividades domiciliares completas, didáticas e apropriadas para o nível escolar.',
+            content: `Voce e um professor experiente e criativo. Gere atividades domiciliares completas, didáticas e adequadas ao nivel escolar.
+
+FORMATO DA ATIVIDADE:
+- Titulo claro e objetivo
+- Nome do aluno e turma (preenchido pelo sistema)
+- Disciplina e data
+- Introducao breve do tema
+- 5 a 10 exercicios progressivos (do facil ao dificil)
+- Espaco para resposta (linhas pontilhadas)
+- NAO inclua gabarito ou respostas
+
+ESTILO:
+- Linguagem acessivel para a idade
+- Exercicios variados (multipla escolha, dissertativo, prático)
+- Inclua exercicios do cotidiano do aluno
+- Formato pronto para impressao`,
           },
           { role: 'user', content: prompt },
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 2000,
       }),
     });
 
@@ -49,7 +65,7 @@ class LLM7Provider implements AIProvider {
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'Não foi possível gerar a atividade.';
+    return data.choices[0]?.message?.content || 'Nao foi possivel gerar a atividade.';
   }
 }
 
@@ -57,11 +73,12 @@ class AIQueue {
   private queue: QueueItem[] = [];
   private processing = false;
 
-  enqueue(prompt: string, config: ConfiguracaoGlobal): string {
+  enqueue(prompt: string, config: ConfiguracaoGlobal, conteudo?: ConteudoIA): string {
     const item: QueueItem = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       prompt,
       config,
+      conteudo,
       attempts: 0,
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -119,13 +136,47 @@ class AIQueue {
 
 export const aiQueue = new AIQueue();
 
+export async function buscarConteudoIA(disciplina: string, serie: string): Promise<ConteudoIA | null> {
+  try {
+    const conteudos = await FirestoreService.query<ConteudoIA>(DOC_TYPES.CONTEUDO_IA, [
+      whereEqual('disciplina', disciplina),
+      whereEqual('serie', serie),
+      whereEqual('ativo', true),
+    ]);
+    return conteudos.length > 0 ? conteudos[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateActivityForStudent(
   alunoNome: string,
   turmaNome: string,
   disciplina: string,
-  config: ConfiguracaoGlobal
+  config: ConfiguracaoGlobal,
+  serie?: string
 ): Promise<string> {
-  const prompt = `Gere uma atividade domiciliar completa para o aluno ${alunoNome} da turma ${turmaNome} na disciplina de ${disciplina}. A atividade deve conter: título, objetivos, conteúdo programático, exercícios práticos e gabarito. Formate em HTML para envio por e-mail.`;
+  const conteudo = await buscarConteudoIA(disciplina, serie || '');
+
+  let prompt = `Gere uma atividade domiciliar para o aluno ${alunoNome} da turma ${turmaNome}.`;
+
+  if (conteudo) {
+    prompt += `\n\nCONTEUDO PROGRAMATICO:
+- Disciplina: ${conteudo.disciplina}
+- Serie: ${conteudo.serie}
+- Tema: ${conteudo.titulo}
+- Conteudo: ${conteudo.conteudo}
+- Objetivos: ${conteudo.objetivos}
+- Nivel: ${conteudo.nivel}
+
+EXEMPLO DE EXERCICIO:
+${conteudo.exerciciosExemplo}
+
+Use este conteudo como base para criar a atividade. Mantenha a coerencia com o que esta sendo trabalhado em sala de aula.`;
+  } else {
+    prompt += `\n\nDisciplina: ${disciplina}
+Gere uma atividade adequada para o nivel medio, com exercicios variados e progressivos.`;
+  }
 
   const provider = new LLM7Provider();
   return provider.generateActivity(prompt, config);

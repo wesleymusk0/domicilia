@@ -72,6 +72,21 @@ export interface Atividade {
   active: boolean;
 }
 
+export interface ConteudoIA {
+  id: string;
+  pedagogoId: string;
+  disciplina: string;
+  serie: string;
+  titulo: string;
+  conteudo: string;
+  objetivos: string;
+  exerciciosExemplo: string;
+  nivel: 'facil' | 'medio' | 'dificil';
+  ativo: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Envio {
   id: string;
   atividadeId: string;

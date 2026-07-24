@@ -32,6 +32,7 @@ export const DOC_TYPES = {
   HISTORICO: 'historico',
   LEMBRETE: 'lembrete',
   CONFIGURACAO: 'configuracao',
+  CONTEUDO_IA: 'conteudo_ia',
   AUDIT_LOG: 'auditLog',
 } as const;
 
