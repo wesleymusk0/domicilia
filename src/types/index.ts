@@ -121,7 +121,7 @@ export interface Historico {
   id: string;
   envioId: string;
   versao: number;
-  arquivo: FileUpload;
+  arquivo: FileUpload | null;
   comentarios: string;
   dataEnvio: string;
   horaEnvio: string;

@@ -79,12 +79,16 @@ function EnviarAtividadeContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!file) { setError('Selecione um arquivo'); return; }
     setSending(true);
 
     try {
-      const storagePath = generateStoragePath(turmaId, alunoId, formData.disciplina, file.name);
-      const fileUpload = await storageProvider.upload(file, storagePath);
+      let fileUpload = null;
+
+      // Upload do arquivo apenas se selecionado
+      if (file) {
+        const storagePath = generateStoragePath(turmaId, alunoId, formData.disciplina, file.name);
+        fileUpload = await storageProvider.upload(file, storagePath);
+      }
 
       const envioData = {
         atividadeId: '',
@@ -133,26 +137,27 @@ function EnviarAtividadeContent() {
           aluno: aluno?.nome || '',
           turma: turma?.nome || '',
           pedagoga: '',
-          data: getCurrentDate(),
+          data: formData.data || getCurrentDate(),
           numAulas: formData.numAulas,
-          encaminhamento: formData.encaminhamento,
-          roteiro: formData.roteiro,
+          encaminhamento: formData.encaminhamento || (file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma'),
+          roteiro: formData.roteiro || (file ? 'Resolver atividade anexada' : 'Acessar plataforma e realizar atividade'),
           observacoes: formData.observacoes,
         }),
       });
 
-      let fichaAttachment = null;
+      let attachments: { filename: string; content: Buffer }[] = [];
+
       if (fichaResponse.ok) {
         const fichaBuffer = Buffer.from(await fichaResponse.arrayBuffer());
-        fichaAttachment = {
+        attachments.push({
           filename: `ficha_${aluno?.nome?.replace(/\s/g, '_')}_${formData.disciplina}.docx`,
           content: fichaBuffer,
-        };
+        });
       }
 
       // Envia emails
       await emailService.sendConfirmation(envioData as Envio);
-      await emailService.sendNotification(envioData as Envio, fichaAttachment ? [fichaAttachment] : undefined);
+      await emailService.sendNotification(envioData as Envio, attachments.length > 0 ? attachments : undefined);
 
       setSuccess(true);
       setTimeout(() => router.push(`/professor/turmas/${turmaId}`), 2000);
@@ -183,9 +188,9 @@ function EnviarAtividadeContent() {
             <Select label="Disciplina" value={formData.disciplina} onChange={(e) => setFormData({ ...formData, disciplina: e.target.value })} options={disciplinas.map((d) => ({ value: d, label: d }))} placeholder="Selecione" required />
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Atividade (PDF, DOCX ou Imagem)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Atividade (Opcional)</label>
               <input type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.gif,.webp" onChange={handleFileChange} className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" />
-              <p className="mt-1 text-sm text-gray-500">PDF, DOCX, JPG, PNG (max 10MB)</p>
+              <p className="mt-1 text-sm text-gray-500">Se nao selecionar arquivo, apenas a ficha sera enviada com instrucoes para acessar a plataforma</p>
               {file && <p className="mt-2 text-sm text-green-600">{file.name}</p>}
             </div>
 
@@ -200,12 +205,12 @@ function EnviarAtividadeContent() {
 
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Encaminhamento</label>
-                <textarea value={formData.encaminhamento} onChange={(e) => setFormData({ ...formData, encaminhamento: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder="Descreva o encaminhamento da atividade..." />
+                <textarea value={formData.encaminhamento} onChange={(e) => setFormData({ ...formData, encaminhamento: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder={file ? 'Descreva o encaminhamento da atividade...' : 'Ex: Acessar plataforma e realizar atividade de fracoes'} />
               </div>
 
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Roteiro de Estudos</label>
-                <textarea value={formData.roteiro} onChange={(e) => setFormData({ ...formData, roteiro: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder="Roteiro de estudos do aluno..." />
+                <textarea value={formData.roteiro} onChange={(e) => setFormData({ ...formData, roteiro: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder={file ? 'Roteiro de estudos do aluno...' : 'Ex: Acessar link da plataforma e seguir instrucoes'} />
               </div>
 
               <div className="mt-4">
@@ -224,14 +229,15 @@ function EnviarAtividadeContent() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">Anexos que serao enviados:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Arquivo da atividade (seu upload)</li>
                 <li>• Ficha.docx (preenchida com os dados acima)</li>
+                {file && <li>• Arquivo da atividade (seu upload)</li>}
+                {!file && <li>• Instrucoes para acessar a plataforma</li>}
               </ul>
             </div>
 
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-              <Button type="submit" loading={sending} disabled={!file || !formData.disciplina}>Enviar</Button>
+              <Button type="submit" loading={sending} disabled={!formData.disciplina}>Enviar</Button>
             </div>
           </form>
         </Card>

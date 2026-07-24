@@ -68,8 +68,14 @@ export default function HistoricoProfessorPage() {
                   <TableCell>{item.dataEnvio} as {item.horaEnvio}</TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <p className="font-medium">{item.arquivo.nome}</p>
-                      <p className="text-gray-500">{formatFileSize(item.arquivo.tamanho)}</p>
+                      {item.arquivo ? (
+                        <>
+                          <p className="font-medium">{item.arquivo.nome}</p>
+                          <p className="text-gray-500">{formatFileSize(item.arquivo.tamanho)}</p>
+                        </>
+                      ) : (
+                        <p className="text-gray-400">Ficha apenas</p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell><p className="text-sm text-gray-500 max-w-xs truncate">{item.comentarios || '-'}</p></TableCell>
