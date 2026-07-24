@@ -31,6 +31,12 @@ export default function ProfessorDashboard() {
     loadStats(turmaParsed);
   }, []);
 
+  const isPeriodoAtivo = (aluno: Aluno): boolean => {
+    if (!aluno.domiciliar || !aluno.dataInicio || !aluno.dataFim) return false;
+    const hoje = new Date().toISOString().split('T')[0];
+    return hoje >= aluno.dataInicio && hoje <= aluno.dataFim;
+  };
+
   const loadStats = async (turma: any) => {
     try {
       const [alunosRes, enviosRes] = await Promise.all([
@@ -41,7 +47,7 @@ export default function ProfessorDashboard() {
       const alunosData = await alunosRes.json();
       const enviosData = await enviosRes.json();
 
-      const alunos = alunosData.data || [];
+      const alunos = (alunosData.data || []).filter((a: Aluno) => isPeriodoAtivo(a));
       const envios = enviosData.data || [];
 
       setStats({
@@ -62,7 +68,7 @@ export default function ProfessorDashboard() {
     <ProfessorLayout>
       <PageHeader title={turma?.nome || 'Minha Turma'} description={`${turma?.ano} - ${turma?.serie}`} />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-500">Alunos</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-gray-900">{stats.totalAlunos}</p></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-500">Alunos Domiciliares</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-gray-900">{stats.totalAlunos}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-500">Enviadas</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-green-600">{stats.enviosEnviados}</p></CardContent></Card>
         <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-500">Pendencias</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-yellow-600">{stats.enviosPendentes}</p></CardContent></Card>
       </div>

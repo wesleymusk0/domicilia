@@ -54,6 +54,9 @@ export interface Aluno {
   createdAt: string;
   updatedAt: string;
   active: boolean;
+  domiciliar: boolean;
+  dataInicio: string;
+  dataFim: string;
 }
 
 export interface Atividade {

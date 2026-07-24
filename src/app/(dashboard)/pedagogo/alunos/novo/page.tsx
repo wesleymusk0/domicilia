@@ -23,6 +23,9 @@ export default function NovoAlunoPage() {
     responsavelNome: '',
     responsavelEmail: '',
     responsavelTelefone: '',
+    domiciliar: false,
+    dataInicio: '',
+    dataFim: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,6 +61,9 @@ export default function NovoAlunoPage() {
         responsavelEmail: formData.responsavelEmail,
         responsavelTelefone: formData.responsavelTelefone,
         active: true,
+        domiciliar: formData.domiciliar,
+        dataInicio: formData.dataInicio,
+        dataFim: formData.dataFim,
       });
 
       const turma = turmas.find((t) => t.id === formData.turmaId);
@@ -78,69 +84,33 @@ export default function NovoAlunoPage() {
   return (
     <DashboardLayout>
       <PageHeader title="Novo Aluno" description="Cadastre um novo aluno" />
-
       <Card className="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Input
-            label="Nome do Aluno"
-            value={formData.nome}
-            onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-            placeholder="Nome completo do aluno"
-            required
-          />
+          <Input label="Nome do Aluno" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required />
+          <Input label="Matricula" value={formData.matricula} onChange={(e) => setFormData({ ...formData, matricula: e.target.value })} placeholder="Numero da matricula" required />
+          <Select label="Turma" value={formData.turmaId} onChange={(e) => setFormData({ ...formData, turmaId: e.target.value })} options={turmas.map((t) => ({ value: t.id, label: t.nome }))} placeholder="Selecione a turma" required />
+          <Input label="Nome do Responsavel" value={formData.responsavelNome} onChange={(e) => setFormData({ ...formData, responsavelNome: e.target.value })} placeholder="Nome do responsavel" required />
+          <Input label="E-mail do Responsavel" type="email" value={formData.responsavelEmail} onChange={(e) => setFormData({ ...formData, responsavelEmail: e.target.value })} placeholder="email@exemplo.com" required />
+          <Input label="Telefone do Responsavel" value={formData.responsavelTelefone} onChange={(e) => setFormData({ ...formData, responsavelTelefone: e.target.value })} placeholder="(11) 99999-9999" />
 
-          <Input
-            label="Matrícula"
-            value={formData.matricula}
-            onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
-            placeholder="Número da matrícula"
-            required
-          />
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Atividade Domiciliar</h3>
+            <div className="flex items-center space-x-2 mb-4">
+              <input type="checkbox" id="domiciliar" checked={formData.domiciliar} onChange={(e) => setFormData({ ...formData, domiciliar: e.target.checked })} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              <label htmlFor="domiciliar" className="text-sm font-medium text-gray-700">Aluno em atividade domiciliar</label>
+            </div>
+            {formData.domiciliar && (
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Data Inicio" type="date" value={formData.dataInicio} onChange={(e) => setFormData({ ...formData, dataInicio: e.target.value })} required={formData.domiciliar} />
+                <Input label="Data Fim" type="date" value={formData.dataFim} onChange={(e) => setFormData({ ...formData, dataFim: e.target.value })} required={formData.domiciliar} />
+              </div>
+            )}
+          </div>
 
-          <Select
-            label="Turma"
-            value={formData.turmaId}
-            onChange={(e) => setFormData({ ...formData, turmaId: e.target.value })}
-            options={turmas.map((t) => ({ value: t.id, label: t.nome }))}
-            placeholder="Selecione a turma"
-            required
-          />
-
-          <Input
-            label="Nome do Responsável"
-            value={formData.responsavelNome}
-            onChange={(e) => setFormData({ ...formData, responsavelNome: e.target.value })}
-            placeholder="Nome do responsável"
-            required
-          />
-
-          <Input
-            label="E-mail do Responsável"
-            type="email"
-            value={formData.responsavelEmail}
-            onChange={(e) => setFormData({ ...formData, responsavelEmail: e.target.value })}
-            placeholder="email@exemplo.com"
-            required
-          />
-
-          <Input
-            label="Telefone do Responsável"
-            value={formData.responsavelTelefone}
-            onChange={(e) => setFormData({ ...formData, responsavelTelefone: e.target.value })}
-            placeholder="(11) 99999-9999"
-          />
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
-          )}
-
+          {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancelar
-            </Button>
-            <Button type="submit" loading={loading}>
-              Cadastrar
-            </Button>
+            <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
+            <Button type="submit" loading={loading}>Cadastrar</Button>
           </div>
         </form>
       </Card>

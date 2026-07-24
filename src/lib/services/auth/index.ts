@@ -6,7 +6,7 @@ import {
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
-import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
+import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
 import { User, UserRole } from '@/types';
 
 export class AuthService {
@@ -14,15 +14,16 @@ export class AuthService {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
-    const user = await FirestoreService.getById<User>(firebaseUser.uid);
+    // Busca pelo campo uid (Firebase Auth UID), nao pelo ID do documento
+    const users = await FirestoreService.query<User>(DOC_TYPES.USER, [
+      whereEqual('uid', firebaseUser.uid),
+    ]);
 
-    if (!user) {
+    if (users.length === 0) {
       throw new Error('Usuario nao encontrado no sistema');
     }
 
-    if (user.type !== DOC_TYPES.USER) {
-      throw new Error('Documento invalido');
-    }
+    const user = users[0];
 
     if (!user.active) {
       throw new Error('Conta desabilitada. Contate o administrador.');
@@ -40,13 +41,16 @@ export class AuthService {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
-    // Usa o UID do Firebase como ID do documento
+    // Cria documento com ID = Firebase Auth UID
     await FirestoreService.createAtId<User>(firebaseUser.uid, DOC_TYPES.USER, {
       uid: firebaseUser.uid,
       email,
       name,
       role,
       active: true,
+      domiciliar: false,
+      dataInicio: '',
+      dataFim: '',
     });
 
     return firebaseUser.uid;
@@ -65,10 +69,10 @@ export class AuthService {
   }
 
   static async getUserData(uid: string): Promise<User | null> {
-    const user = await FirestoreService.getById<User>(uid);
-    if (user && user.type === DOC_TYPES.USER) {
-      return user;
-    }
-    return null;
+    // Busca pelo campo uid
+    const users = await FirestoreService.query<User>(DOC_TYPES.USER, [
+      whereEqual('uid', uid),
+    ]);
+    return users.length > 0 ? users[0] : null;
   }
 }

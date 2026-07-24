@@ -12,6 +12,7 @@ import { Aluno, Envio } from '@/types';
 
 interface AlunoComStatus extends Aluno {
   hasPending: boolean;
+  periodoAtivo: boolean;
 }
 
 export default function TurmaAlunosPage() {
@@ -31,6 +32,12 @@ export default function TurmaAlunosPage() {
     loadAlunos(turmaParsed);
   }, []);
 
+  const isPeriodoAtivo = (aluno: Aluno): boolean => {
+    if (!aluno.domiciliar || !aluno.dataInicio || !aluno.dataFim) return false;
+    const hoje = new Date().toISOString().split('T')[0];
+    return hoje >= aluno.dataInicio && hoje <= aluno.dataFim;
+  };
+
   const loadAlunos = async (turma: any) => {
     try {
       const [alunosRes, enviosRes] = await Promise.all([
@@ -41,13 +48,13 @@ export default function TurmaAlunosPage() {
       const alunosData = await alunosRes.json();
       const enviosData = await enviosRes.json();
 
-      const alunosDaTurma = alunosData.data || [];
+      const alunosDaTurma = (alunosData.data || []).filter((a: Aluno) => isPeriodoAtivo(a));
       const enviosDaTurma = enviosData.data || [];
 
       const alunosComStatus: AlunoComStatus[] = alunosDaTurma.map((aluno: Aluno) => {
         const alunoEnvios = enviosDaTurma.filter((e: Envio) => e.alunoId === aluno.id);
         const temPendencia = alunoEnvios.length === 0 || alunoEnvios.some((e: Envio) => e.status === 'pendente');
-        return { ...aluno, hasPending: temPendencia };
+        return { ...aluno, hasPending: temPendencia, periodoAtivo: true };
       });
 
       setAlunos(alunosComStatus);
@@ -66,9 +73,9 @@ export default function TurmaAlunosPage() {
 
   return (
     <ProfessorLayout>
-      <PageHeader title={turma?.nome || 'Alunos'} description="Selecione um aluno para enviar atividade" />
+      <PageHeader title={turma?.nome || 'Alunos'} description="Alunos com atividade domiciliar ativa" />
       {alunos.length === 0 ? (
-        <EmptyState title="Nenhum aluno encontrado" description="Nao ha alunos nesta turma" />
+        <EmptyState title="Nenhum aluno com domiciliar ativo" description="Nao ha alunos com periodo de domiciliar vigente nesta turma" />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {alunos.map((aluno) => (
@@ -83,6 +90,9 @@ export default function TurmaAlunosPage() {
                   )}
                 </div>
                 <p className="mt-2 text-sm text-gray-500">Matricula: {aluno.matricula}</p>
+                {aluno.dataInicio && aluno.dataFim && (
+                  <p className="mt-1 text-sm text-gray-500">Periodo: {aluno.dataInicio} a {aluno.dataFim}</p>
+                )}
                 <div className="mt-4">
                   <Button onClick={() => handleEnviarAtividade(aluno.id)} size="sm">Enviar Atividade</Button>
                 </div>
