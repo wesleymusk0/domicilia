@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const templateBuffer = readFileSync(templatePath);
     const zip = await JSZip.loadAsync(templateBuffer);
 
-    // Remove fontes embutidas
+    // Remove fontes
     Object.keys(zip.files).filter(f => f.startsWith('word/fonts/')).forEach(f => zip.remove(f));
 
     const xmlFile = zip.file('word/document.xml');
@@ -21,62 +21,27 @@ export async function POST(request: NextRequest) {
     let xml = await xmlFile.async('string');
 
     // Remove paginas 2-5
-    const segundoEnc = xml.indexOf('Encaminhamento de conte', xml.indexOf('Encaminhamento de conte') + 1);
-    if (segundoEnc > 0) {
-      const antes = xml.lastIndexOf('<w:p', segundoEnc);
-      xml = xml.substring(0, antes) + '</w:body></w:document>';
-    }
+    const idx = xml.indexOf('Encaminhamento de conte', xml.indexOf('Encaminhamento de conte') + 1);
+    if (idx > 0) xml = xml.substring(0, xml.lastIndexOf('<w:p', idx)) + '</w:body></w:document>';
 
     // Substitui fontes
-    xml = xml.replace(/w:ascii="[^"]*" w:cs="[^"]*" w:eastAsia="[^"]*" w:hAnsi="[^"]*"/g, 'w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"');
+    xml = xml.replace(/w:ascii="[^"]*"/g, 'w:ascii="Arial"');
+    xml = xml.replace(/w:cs="[^"]*"/g, 'w:cs="Arial"');
+    xml = xml.replace(/w:eastAsia="[^"]*"/g, 'w:eastAsia="Arial"');
+    xml = xml.replace(/w:hAnsi="[^"]*"/g, 'w:hAnsi="Arial"');
 
-    // PROFESSOR - adiciona valor apos o label
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">PROFESSOR: <\/w:t>)([\s\S]*?)(<w:t xml:space="preserve">COMPONENTE)/,
-      `$1${dados.professor}$3`
-    );
+    // Substitui textos diretamente nos <w:t>
+    xml = xml.replace(/>PROFESSOR: <\//g, `>PROFESSOR: ${dados.professor}</`);
+    xml = xml.replace(/>COMPONENTE\/DISCIPLINA: <\//g, `>COMPONENTE/DISCIPLINA: ${dados.disciplina}</`);
+    xml = xml.replace(/>ESTUDANTE: <\//g, `>ESTUDANTE: ${dados.aluno}</`);
+    xml = xml.replace(/>TURMA: <\//g, `>TURMA: ${dados.turma}</`);
+    xml = xml.replace(/>PEDAGOGA RESP.<\//g, `>PEDAGOGA RESP.: ${dados.pedagoga}</`);
+    xml = xml.replace(/>QUINZENA\/DATA: <\//g, `>QUINZENA/DATA: ${dados.data}</`);
+    xml = xml.replace(/>MÊS:<\//g, `>MES: ${dados.data}</`);
+    xml = xml.replace(/>Nº DE AULAS:<\//g, `>NO DE AULAS: ${dados.numAulas}</`);
 
-    // COMPONENTE/DISCIPLINA
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">COMPONENTE\/DISCIPLINA: <\/w:t>)([\s\S]*?)(<\/w:r>)/,
-      `$1${dados.disciplina}$3`
-    );
-
-    // ESTUDANTE
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">ESTUDANTE: <\/w:t>)([\s\S]*?)(<w:t xml:space="preserve">TURMA)/,
-      `$1${dados.aluno}$3`
-    );
-
-    // TURMA
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">TURMA: <\/w:t>)([\s\S]*?)(<\/w:r>)/,
-      `$1${dados.turma}$3`
-    );
-
-    // PEDAGOGA RESP. - valor vem depois do label na mesma celula
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">PEDAGOGA RESP.<\/w:t>)([\s\S]*?)(<w:t xml:space="preserve">QUINZENA)/,
-      `$1 ${dados.pedagoga}$3`
-    );
-
-    // QUINZENA/DATA - substitui o valor existente
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">QUINZENA\/DATA: <\/w:t>)([\s\S]*?)(<w:t xml:space="preserve">)([\s\S]*?)(<\/w:t>)/,
-      `$1$3${dados.data}$5`
-    );
-
-    // MÊS
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">MÊS:<\/w:t>)([\s\S]*?)(<\/w:r>)/,
-      `$1 ${dados.data}$3`
-    );
-
-    // Nº DE AULAS
-    xml = xml.replace(
-      /(<w:t xml:space="preserve">Nº DE AULAS:<\/w:t>)([\s\S]*?)(<\/w:r>)/,
-      `$1 ${dados.numAulas}$3`
-    );
+    // Remove valor antigo do QUINZENA/DATA se existir
+    xml = xml.replace(/>05\/02\/2026  a  27\/02\/2026 - <\//g, `>${dados.data}</`);
 
     zip.file('word/document.xml', xml);
 
