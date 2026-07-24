@@ -99,7 +99,7 @@ class ResendEmailService implements EmailService {
     `;
     return this.send(
       config?.emailDestinoNotificacoes || 'provasmaluf@gmail.com',
-      `Nova Atividade - ${envio.alunoNome}`,
+      `Atividade Domiciliar - ${envio.alunoNome}`,
       html,
       attachments
     );

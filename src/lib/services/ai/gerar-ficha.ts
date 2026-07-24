@@ -1,6 +1,4 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from 'docx';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 export interface FichaData {
   professor: string;
@@ -15,127 +13,94 @@ export interface FichaData {
   observacoes: string;
 }
 
+const b = { style: BorderStyle.SINGLE, size: 8, color: '000000' };
+const cellBorders = { top: b, bottom: b, left: b, right: b };
+const tb = { style: BorderStyle.SINGLE, size: 4, color: '000001' };
+const thinBorders = { top: tb, bottom: tb, left: tb, right: tb };
+
+function cell(label: string, value: string, span?: number) {
+  const kids: any[] = [];
+  if (label) kids.push(new Paragraph({ children: [new TextRun({ text: label, bold: true, font: 'Arial', size: 20 })], spacing: { after: 0, line: 240 }, alignment: AlignmentType.BOTH }));
+  if (value) kids.push(new Paragraph({ children: [new TextRun({ text: value, font: 'Arial', size: 20 })], spacing: { after: 0, line: 240 }, alignment: AlignmentType.BOTH }));
+  if (!kids.length) kids.push(new Paragraph({ children: [] }));
+  return new TableCell({ width: { size: span ? 1380 + 1920 + 2252 : 4753, type: WidthType.DXA }, borders: cellBorders, columnSpan: span, children: kids });
+}
+
+function emptyLines(n: number) {
+  return Array(n).fill(null).map(() => new Paragraph({ children: [], spacing: { after: 0, line: 240 }, indent: { left: 141 } }));
+}
+
 export async function gerarFicha(data: FichaData): Promise<Buffer> {
-  const borderStyle = {
-    style: BorderStyle.SINGLE,
-    size: 1,
-    color: '000000',
-  };
-
-  const cellBorders = {
-    top: borderStyle,
-    bottom: borderStyle,
-    left: borderStyle,
-    right: borderStyle,
-  };
-
-  const makeCell = (label: string, value: string, width: number = 50) => {
-    return new TableCell({
-      width: { size: width, type: WidthType.PERCENTAGE },
-      borders: cellBorders,
+  const doc = new Document({
+    sections: [{
+      properties: { page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } } },
       children: [
         new Paragraph({
-          children: [new TextRun({ text: label, bold: true, size: 20 })],
-          spacing: { after: 50 },
+          children: [new TextRun({ text: 'Encaminhamento de conteudo/atividade Domiciliar', bold: true, font: 'Arial', size: 28 })],
+          spacing: { after: 57 },
+          indent: { right: 288 },
+          alignment: AlignmentType.BOTH,
         }),
+        new Table({
+          width: { size: 10305, type: WidthType.DXA },
+          rows: [
+            new TableRow({ children: [cell('PROFESSOR: ', data.professor), cell('COMPONENTE/DISCIPLINA: ', data.disciplina, 3)] }),
+            new TableRow({ children: [cell('ESTUDANTE: ', data.aluno, 2), cell('TURMA: ', data.turma, 2)] }),
+            new TableRow({ children: [cell('PEDAGOGA RESP. ', data.pedagoga, 2), cell('QUINZENA/DATA: ', data.data, 2)] }),
+            new TableRow({ children: [cell('MES:', '', 2), cell('FICHA 1:', ''), cell('NO DE AULAS:', data.numAulas)] }),
+          ],
+        }),
+        new Paragraph({ children: [], spacing: { after: 0, line: 240 } }),
         new Paragraph({
-          children: [new TextRun({ text: value || '________________', size: 20 })],
+          children: [new TextRun({ text: 'ENCAMINHAMENTO:', font: 'Arial', size: 28 })],
+          spacing: { after: 0, line: 240 },
+          alignment: AlignmentType.BOTH,
+        }),
+        new Table({
+          width: { size: 10230, type: WidthType.DXA },
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 10230, type: WidthType.DXA },
+                  borders: thinBorders,
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: 'ROTEIRO DE ESTUDOS', bold: true, font: 'Arial', size: 28 })],
+                      spacing: { after: 0, line: 240 },
+                      indent: { left: 141 },
+                    }),
+                    ...emptyLines(18),
+                  ],
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 10230, type: WidthType.DXA },
+                  borders: thinBorders,
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: 'OBSERVACOES:', font: 'Arial', size: 20 })],
+                      spacing: { after: 0, line: 240 },
+                    }),
+                    ...emptyLines(4),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+        new Paragraph({ children: [], spacing: { after: 0, line: 240 } }),
+        new Paragraph({
+          children: [new TextRun({ text: 'DESENVOLVER A ATIVIDADE (TRABALHO/PROVA) NA SEQUENCIA OU ENVIAR AS MESMAS EM ANEXO.', font: 'Arial', size: 28, italics: true })],
+          indent: { right: 288 },
+          alignment: AlignmentType.BOTH,
         }),
       ],
-    });
-  };
-
-  const table = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({
-        children: [
-          makeCell('PROFESSOR:', data.professor),
-          makeCell('DISCIPLINA:', data.disciplina),
-        ],
-      }),
-      new TableRow({
-        children: [
-          makeCell('ESTUDANTE:', data.aluno),
-          makeCell('TURMA:', data.turma),
-        ],
-      }),
-      new TableRow({
-        children: [
-          makeCell('PEDAGOGA RESP.:', data.pedagoga),
-          makeCell('DATA:', data.data),
-        ],
-      }),
-      new TableRow({
-        children: [
-          makeCell('Nº DE AULAS:', data.numAulas),
-          makeCell('QUINZENA:', data.data),
-        ],
-      }),
-    ],
+    }],
   });
 
-  const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: { margin: { top: 1000, right: 1000, bottom: 1000, left: 1000 } },
-        },
-        children: [
-          new Paragraph({
-            children: [new TextRun({ text: 'Encaminhamento de conteudo/atividade Domiciliar', bold: true, size: 28 })],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 300 },
-          }),
-          table,
-          new Paragraph({ children: [new TextRun({ text: '' })], spacing: { before: 200 } }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Conteudos e atividades trimestrais.', size: 20, italics: true })],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'ENCAMINHAMENTO:', bold: true, size: 22 })],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: data.encaminhamento || '________________', size: 22 })],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'ROTEIRO DE ESTUDOS:', bold: true, size: 22 })],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: data.roteiro || '________________', size: 22 })],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'OBSERVACOES:', bold: true, size: 22 })],
-            spacing: { after: 100 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: data.observacoes || '________________', size: 22 })],
-            spacing: { after: 400 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'DESENVOLVER A ATIVIDADE (TRABALHO/PROVA) NA SEQUENCIA OU ENVIAR AS MESMAS EM ANEXO.', size: 18, italics: true })],
-            alignment: AlignmentType.CENTER,
-          }),
-          new Paragraph({ children: [new TextRun({ text: '' })], spacing: { before: 400 } }),
-          new Paragraph({
-            children: [new TextRun({ text: '________________________________________', size: 22 })],
-            alignment: AlignmentType.CENTER,
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Assinatura do Professor(a)', size: 18, color: '666666' })],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 100 },
-          }),
-        ],
-      },
-    ],
-  });
-
-  const buffer = await Packer.toBuffer(doc);
-  return Buffer.from(buffer);
+  return Buffer.from(await Packer.toBuffer(doc));
 }
