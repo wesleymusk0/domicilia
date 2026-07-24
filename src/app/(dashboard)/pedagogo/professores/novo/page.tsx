@@ -75,9 +75,12 @@ export default function NovoProfessorPage() {
       for (const turmaId of formData.turmaIds) {
         const turma = turmas.find((t) => t.id === turmaId);
         if (turma) {
-          await FirestoreService.update(turmaId, {
-            professorIds: [...(turma.professorIds || []), userId],
-          });
+          const profsAtuais = turma.professorIds || [];
+          if (!profsAtuais.includes(userId)) {
+            await FirestoreService.update(turmaId, {
+              professorIds: [...profsAtuais, userId],
+            });
+          }
         }
       }
 

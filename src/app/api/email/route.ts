@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html } = await request.json();
+    const { to, subject, html, attachments } = await request.json();
 
     if (!to || !subject || !html) {
-      return NextResponse.json({ error: 'Campos obrigatórios não informados' }, { status: 400 });
+      return NextResponse.json({ error: 'Campos obrigatorios nao informados' }, { status: 400 });
     }
 
     const resendApiKey = process.env.RESEND_API_KEY;
 
     if (!resendApiKey) {
-      return NextResponse.json({ error: 'Chave API do Resend não configurada' }, { status: 500 });
+      return NextResponse.json({ error: 'Chave API do Resend nao configurada' }, { status: 500 });
+    }
+
+    const body: any = {
+      from: process.env.EMAIL_FROM || 'sistema@domicilia.com.br',
+      to,
+      subject,
+      html,
+    };
+
+    if (attachments && attachments.length > 0) {
+      body.attachments = attachments;
     }
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -20,12 +31,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${resendApiKey}`,
       },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'sistema@domicilia.com.br',
-        to,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -34,7 +40,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
-
     return NextResponse.json({ success: true, id: data.id });
   } catch (error: any) {
     console.error('Erro ao enviar e-mail:', error);

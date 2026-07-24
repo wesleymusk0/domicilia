@@ -1,5 +1,6 @@
 import { ConfiguracaoGlobal, ConteudoIA } from '@/types';
 import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
+import { gerarDOCX, gerarPDF, AtividadeData } from './gerar-documentos';
 
 export interface AIProvider {
   generateActivity(prompt: string, config: ConfiguracaoGlobal): Promise<string>;
@@ -32,22 +33,20 @@ class LLM7Provider implements AIProvider {
         messages: [
           {
             role: 'system',
-            content: `Voce e um professor experiente e criativo. Gere atividades domiciliares completas, didáticas e adequadas ao nivel escolar.
+            content: `Voce e um professor experiente e criativo. Gere atividades domiciliares completas, didaticas e adequadas ao nivel escolar.
 
 FORMATO DA ATIVIDADE:
 - Titulo claro e objetivo
-- Nome do aluno e turma (preenchido pelo sistema)
-- Disciplina e data
-- Introducao breve do tema
 - 5 a 10 exercicios progressivos (do facil ao dificil)
-- Espaco para resposta (linhas pontilhadas)
+- Exercicios variados (multipla escolha, dissertativo, pratico)
+- Espaco para resposta (linhas com ___)
 - NAO inclua gabarito ou respostas
+- NAO inclua cabecalho (nome, data, turma) - o sistema ja adiciona
 
-ESTILO:
-- Linguagem acessivel para a idade
-- Exercicios variados (multipla escolha, dissertativo, prático)
-- Inclua exercicios do cotidiano do aluno
-- Formato pronto para impressao`,
+FORMATACAO:
+- Use ## para titulos de secao
+- Use **texto** para negrito
+- Cada exercicio em uma linha separada`,
           },
           { role: 'user', content: prompt },
         ],
@@ -155,7 +154,7 @@ export async function generateActivityForStudent(
   disciplina: string,
   config: ConfiguracaoGlobal,
   serie?: string
-): Promise<string> {
+): Promise<{ texto: string; pdf: Buffer; docx: Buffer }> {
   const conteudo = await buscarConteudoIA(disciplina, serie || '');
 
   let prompt = `Gere uma atividade domiciliar para o aluno ${alunoNome} da turma ${turmaNome}.`;
@@ -172,12 +171,28 @@ export async function generateActivityForStudent(
 EXEMPLO DE EXERCICIO:
 ${conteudo.exerciciosExemplo}
 
-Use este conteudo como base para criar a atividade. Mantenha a coerencia com o que esta sendo trabalhado em sala de aula.`;
+Use este conteudo como base para criar a atividade.`;
   } else {
     prompt += `\n\nDisciplina: ${disciplina}
 Gere uma atividade adequada para o nivel medio, com exercicios variados e progressivos.`;
   }
 
   const provider = new LLM7Provider();
-  return provider.generateActivity(prompt, config);
+  const texto = await provider.generateActivity(prompt, config);
+
+  const atividadeData: AtividadeData = {
+    titulo: 'Atividade Domiciliar',
+    disciplina,
+    serie: serie || '',
+    turma: turmaNome,
+    aluno: alunoNome,
+    conteudo: texto,
+  };
+
+  const [pdf, docx] = await Promise.all([
+    Promise.resolve(gerarPDF(atividadeData)),
+    gerarDOCX(atividadeData),
+  ]);
+
+  return { texto, pdf, docx };
 }
