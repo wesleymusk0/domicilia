@@ -13,7 +13,6 @@ import { PageLoading } from '@/components/ui/Loading';
 import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { storageProvider, validateFile, generateStoragePath } from '@/lib/services/storage';
 import { emailService } from '@/lib/services/email';
-import { gerarFicha } from '@/lib/services/ai/gerar-ficha';
 import { Aluno, Turma, Envio, Historico } from '@/types';
 import { getCurrentDate, getCurrentTime } from '@/lib/utils';
 
@@ -30,7 +29,11 @@ function EnviarAtividadeContent() {
   const [formData, setFormData] = useState({
     disciplina: '',
     comentarios: '',
+    encaminhamento: '',
+    roteiro: '',
     observacoes: '',
+    numAulas: '',
+    data: '',
   });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,25 +123,36 @@ function EnviarAtividadeContent() {
         disciplina: formData.disciplina,
       });
 
-      // Gera ficha DOCX
-      const fichaBuffer = await gerarFicha({
-        alunoNome: aluno?.nome || '',
-        turmaNome: turma?.nome || '',
-        disciplina: formData.disciplina,
-        dataEnvio: getCurrentDate(),
-        professorNome: user!.name,
-        observacoes: formData.observacoes,
-        atividadeRef: envioId,
+      // Gera ficha DOCX usando template
+      const fichaResponse = await fetch('/api/ficha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          professor: user!.name,
+          disciplina: formData.disciplina,
+          aluno: aluno?.nome || '',
+          turma: turma?.nome || '',
+          pedagoga: '',
+          data: getCurrentDate(),
+          numAulas: formData.numAulas,
+          encaminhamento: formData.encaminhamento,
+          roteiro: formData.roteiro,
+          observacoes: formData.observacoes,
+        }),
       });
 
-      const fichaAttachment = {
-        filename: `ficha_${aluno?.nome?.replace(/\s/g, '_')}_${formData.disciplina}.docx`,
-        content: fichaBuffer,
-      };
+      let fichaAttachment = null;
+      if (fichaResponse.ok) {
+        const fichaBuffer = Buffer.from(await fichaResponse.arrayBuffer());
+        fichaAttachment = {
+          filename: `ficha_${aluno?.nome?.replace(/\s/g, '_')}_${formData.disciplina}.docx`,
+          content: fichaBuffer,
+        };
+      }
 
-      // Envia emails com ficha anexada
+      // Envia emails
       await emailService.sendConfirmation(envioData as Envio);
-      await emailService.sendNotification(envioData as Envio, [fichaAttachment]);
+      await emailService.sendNotification(envioData as Envio, fichaAttachment ? [fichaAttachment] : undefined);
 
       setSuccess(true);
       setTimeout(() => router.push(`/professor/turmas/${turmaId}`), 2000);
@@ -177,8 +191,27 @@ function EnviarAtividadeContent() {
 
             <div className="border-t pt-4">
               <h4 className="font-medium text-gray-900 mb-3">Ficha de Atividade (DOCX)</h4>
-              <p className="text-sm text-gray-500 mb-3">Preencha os dados da ficha que sera gerada em DOCX e enviada junto com a atividade</p>
-              <Input label="Observacoes" value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} placeholder="Observacoes sobre a atividade (opcional)" />
+              <p className="text-sm text-gray-500 mb-3">Preencha os campos da ficha que sera gerada em DOCX</p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input label="Nº de Aulas" value={formData.numAulas} onChange={(e) => setFormData({ ...formData, numAulas: e.target.value })} placeholder="Ex: 4" />
+                <Input label="Quinzena/Data" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} placeholder="Ex: 05/02/2026 a 27/02/2026" />
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Encaminhamento</label>
+                <textarea value={formData.encaminhamento} onChange={(e) => setFormData({ ...formData, encaminhamento: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder="Descreva o encaminhamento da atividade..." />
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Roteiro de Estudos</label>
+                <textarea value={formData.roteiro} onChange={(e) => setFormData({ ...formData, roteiro: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder="Roteiro de estudos do aluno..." />
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observacoes da Ficha</label>
+                <textarea value={formData.observacoes} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} rows={2} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder="Observacoes adicionais..." />
+              </div>
             </div>
 
             <div>
@@ -192,7 +225,7 @@ function EnviarAtividadeContent() {
               <h4 className="font-medium text-blue-900 mb-2">Anexos que serao enviados:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• Arquivo da atividade (seu upload)</li>
-                <li>• Ficha de atividade.docx (gerada automaticamente)</li>
+                <li>• Ficha.docx (preenchida com os dados acima)</li>
               </ul>
             </div>
 
