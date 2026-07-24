@@ -3,7 +3,7 @@ import { User, Envio, LembreteConfig, ConfiguracaoGlobal } from '@/types';
 export interface EmailService {
   sendWelcome(user: User, password: string): Promise<boolean>;
   sendConfirmation(envio: Envio): Promise<boolean>;
-  sendNotification(envio: Envio): Promise<boolean>;
+  sendNotification(envio: Envio, attachments?: { filename: string; content: Buffer }[]): Promise<boolean>;
   sendAIActivity(
     to: string,
     alunoNome: string,
@@ -83,7 +83,7 @@ class ResendEmailService implements EmailService {
     return this.send(envio.professorEmail || '', 'Confirmacao de Envio de Atividade', html);
   }
 
-  async sendNotification(envio: Envio): Promise<boolean> {
+  async sendNotification(envio: Envio, attachments?: { filename: string; content: Buffer }[]): Promise<boolean> {
     const config = await this.getConfig();
     const html = `
       <h2>Nova Atividade Recebida</h2>
@@ -100,7 +100,8 @@ class ResendEmailService implements EmailService {
     return this.send(
       config?.emailDestinoNotificacoes || 'provasmaluf@gmail.com',
       `Nova Atividade - ${envio.alunoNome}`,
-      html
+      html,
+      attachments
     );
   }
 
