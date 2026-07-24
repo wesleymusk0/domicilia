@@ -22,8 +22,9 @@ export default function LoginPage() {
 
     try {
       const user = await login(email, password);
-      const dashPath = user.role === 'admin' ? '/admin' : user.role === 'pedagogo' ? '/pedagogo' : '/professor';
-      router.push(dashPath);
+      if (user.role === 'admin') router.push('/admin');
+      else if (user.role === 'pedagogo') router.push('/pedagogo');
+      else router.push('/professor');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
     } finally {
@@ -40,28 +41,10 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
-            <Input
-              label="Senha"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
-              required
-            />
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>
-            )}
-            <Button type="submit" className="w-full" loading={loading}>
-              Entrar
-            </Button>
+            <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required />
+            <Input label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="********" required />
+            {error && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</p>}
+            <Button type="submit" className="w-full" loading={loading}>Entrar</Button>
           </form>
         </CardContent>
       </Card>

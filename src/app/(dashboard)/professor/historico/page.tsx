@@ -1,38 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import ProfessorLayout from '@/components/layout/ProfessorLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageLoading } from '@/components/ui/Loading';
+import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
 import { Historico } from '@/types';
 import { formatFileSize } from '@/lib/utils';
 
 export default function HistoricoProfessorPage() {
-  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [historico, setHistorico] = useState<Historico[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const turmaData = sessionStorage.getItem('professorTurma');
-    if (!turmaData) {
-      router.push('/professor/acesso');
-      return;
-    }
-    loadHistorico(JSON.parse(turmaData));
-  }, []);
+    if (!authLoading && user) loadHistorico();
+    else if (!authLoading) setLoading(false);
+  }, [user, authLoading]);
 
-  const loadHistorico = async (turma: any) => {
+  const loadHistorico = async () => {
     try {
-      const res = await fetch(`/api/professor/dados?turmaId=${turma.id}&tipo=historico`);
-      const data = await res.json();
-      const sorted = (data.data || []).sort(
-        (a: Historico, b: Historico) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      const data = await FirestoreService.query<Historico>(DOC_TYPES.HISTORICO, [
+        whereEqual('professorId', user!.id),
+      ]);
+      const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setHistorico(sorted);
     } catch (error) {
       console.error('Erro ao carregar historico:', error);
@@ -41,10 +37,10 @@ export default function HistoricoProfessorPage() {
     }
   };
 
-  if (loading) return <PageLoading />;
+  if (authLoading || loading) return <PageLoading />;
 
   return (
-    <ProfessorLayout>
+    <DashboardLayout>
       <PageHeader title="Historico de Envios" description="Todas as suas entregas" />
       {historico.length === 0 ? (
         <EmptyState title="Nenhum envio registrado" description="Voce ainda nao enviou nenhuma atividade" />
@@ -54,6 +50,7 @@ export default function HistoricoProfessorPage() {
             <TableHeader>
               <tr>
                 <TableHead>Aluno</TableHead>
+                <TableHead>Turma</TableHead>
                 <TableHead>Disciplina</TableHead>
                 <TableHead>Versao</TableHead>
                 <TableHead>Data/Hora</TableHead>
@@ -65,6 +62,7 @@ export default function HistoricoProfessorPage() {
               {historico.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell><div className="font-medium">{item.alunoNome}</div></TableCell>
+                  <TableCell>{item.turmaNome}</TableCell>
                   <TableCell>{item.disciplina}</TableCell>
                   <TableCell><Badge variant="info">v{item.versao}</Badge></TableCell>
                   <TableCell>{item.dataEnvio} as {item.horaEnvio}</TableCell>
@@ -81,6 +79,6 @@ export default function HistoricoProfessorPage() {
           </Table>
         </Card>
       )}
-    </ProfessorLayout>
+    </DashboardLayout>
   );
 }

@@ -2,20 +2,24 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ProfessorLayout from '@/components/layout/ProfessorLayout';
+import { useAuth } from '@/contexts/AuthContext';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { PageLoading } from '@/components/ui/Loading';
+import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { storageProvider, validateFile, generateStoragePath } from '@/lib/services/storage';
-import { Aluno, Turma } from '@/types';
+import { emailService } from '@/lib/services/email';
+import { Aluno, Turma, Envio, Historico } from '@/types';
 import { getCurrentDate, getCurrentTime } from '@/lib/utils';
 
 function EnviarAtividadeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
 
   const turmaId = searchParams.get('turmaId') || '';
   const alunoId = searchParams.get('alunoId') || '';
@@ -29,37 +33,21 @@ function EnviarAtividadeContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const disciplinas = ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica'];
+  const disciplinas = user?.disciplinas || ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica'];
 
   useEffect(() => {
-    const turmaData = sessionStorage.getItem('professorTurma');
-    if (!turmaData) {
-      router.push('/professor/acesso');
-      return;
-    }
-    if (turmaId && alunoId) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    if (!authLoading && user && turmaId && alunoId) loadData();
+    else if (!authLoading) setLoading(false);
+  }, [user, authLoading, turmaId, alunoId]);
 
   const loadData = async () => {
     try {
-      const [alunoRes, turmaRes] = await Promise.all([
-        fetch(`/api/professor/documento?id=${alunoId}`),
-        fetch(`/api/professor/documento?id=${turmaId}`),
+      const [alunoData, turmaData] = await Promise.all([
+        FirestoreService.getById<Aluno>(alunoId),
+        FirestoreService.getById<Turma>(turmaId),
       ]);
-
-      if (alunoRes.ok) {
-        const alunoData = await alunoRes.json();
-        if (alunoData.success) setAluno(alunoData.data);
-      }
-
-      if (turmaRes.ok) {
-        const turmaData = await turmaRes.json();
-        if (turmaData.success) setTurma(turmaData.data);
-      }
+      setAluno(alunoData);
+      setTurma(turmaData);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -90,59 +78,48 @@ function EnviarAtividadeContent() {
       const storagePath = generateStoragePath(turmaId, alunoId, formData.disciplina, file.name);
       const fileUpload = await storageProvider.upload(file, storagePath);
 
-      const turmaStorage = JSON.parse(sessionStorage.getItem('professorTurma') || '{}');
-
       const envioData = {
         atividadeId: '',
         alunoId,
-        professorId: 'professor_' + Date.now(),
+        professorId: user!.id,
+        professorNome: user!.name,
         turmaId,
         disciplina: formData.disciplina,
         versao: 1,
-        status: 'enviado',
+        status: 'enviado' as const,
         arquivo: fileUpload,
         comentarios: formData.comentarios,
         dataEnvio: getCurrentDate(),
         horaEnvio: getCurrentTime(),
         pedagogoId: turma?.pedagogoId || '',
         alunoNome: aluno?.nome || '',
-        professorNome: turmaStorage.nome || 'Professor',
         turmaNome: turma?.nome || '',
-        professorEmail: '',
+        professorEmail: user!.email,
       };
 
-      const envioRes = await fetch('/api/professor/documento', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'envio', data: envioData }),
-      });
-      const envioResult = await envioRes.json();
+      const envioId = await FirestoreService.create<Envio>(DOC_TYPES.ENVIO, envioData);
 
-      await fetch('/api/professor/documento', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: 'historico',
-          data: {
-            envioId: envioResult.id,
-            versao: 1,
-            arquivo: fileUpload,
-            comentarios: formData.comentarios,
-            dataEnvio: getCurrentDate(),
-            horaEnvio: getCurrentTime(),
-            professorId: envioData.professorId,
-            professorNome: envioData.professorNome,
-            alunoId,
-            alunoNome: aluno?.nome || '',
-            turmaId,
-            turmaNome: turma?.nome || '',
-            disciplina: formData.disciplina,
-          },
-        }),
+      await FirestoreService.create<Historico>(DOC_TYPES.HISTORICO, {
+        envioId,
+        versao: 1,
+        arquivo: fileUpload,
+        comentarios: formData.comentarios,
+        dataEnvio: getCurrentDate(),
+        horaEnvio: getCurrentTime(),
+        professorId: user!.id,
+        professorNome: user!.name,
+        alunoId,
+        alunoNome: aluno?.nome || '',
+        turmaId,
+        turmaNome: turma?.nome || '',
+        disciplina: formData.disciplina,
       });
+
+      await emailService.sendConfirmation(envioData as Envio);
+      await emailService.sendNotification(envioData as Envio);
 
       setSuccess(true);
-      setTimeout(() => router.push('/professor/turmas'), 2000);
+      setTimeout(() => router.push(`/professor/turmas/${turmaId}`), 2000);
     } catch (err: any) {
       setError(err.message || 'Erro ao enviar atividade');
     } finally {
@@ -150,10 +127,10 @@ function EnviarAtividadeContent() {
     }
   };
 
-  if (loading) return <PageLoading />;
+  if (authLoading || loading) return <PageLoading />;
 
   return (
-    <ProfessorLayout>
+    <DashboardLayout>
       <PageHeader title="Enviar Atividade" description={aluno ? `Enviar para ${aluno.nome}` : ''} actions={<Button variant="outline" onClick={() => router.back()}>Voltar</Button>} />
       {success ? (
         <Card className="max-w-2xl"><div className="text-center py-12"><div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4"><span className="text-3xl text-green-600">✓</span></div><h3 className="text-lg font-medium text-gray-900">Atividade Enviada!</h3></div></Card>
@@ -180,7 +157,7 @@ function EnviarAtividadeContent() {
           </form>
         </Card>
       )}
-    </ProfessorLayout>
+    </DashboardLayout>
   );
 }
 
