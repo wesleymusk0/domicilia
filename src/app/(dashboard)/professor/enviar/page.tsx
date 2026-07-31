@@ -168,6 +168,14 @@ function EnviarAtividadeContent() {
         });
       }
 
+      if (file) {
+        const fileArrayBuffer = await file.arrayBuffer();
+        attachments.push({
+          filename: file.name,
+          content: Buffer.from(fileArrayBuffer),
+        });
+      }
+
       // Envia emails
       await emailService.sendConfirmation(envioData as Envio);
       await emailService.sendNotification(envioData as Envio, attachments.length > 0 ? attachments : undefined);
