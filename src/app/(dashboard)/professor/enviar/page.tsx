@@ -93,7 +93,7 @@ function EnviarAtividadeContent() {
 
       // Upload do arquivo apenas se selecionado
       if (file) {
-        const storagePath = generateStoragePath(turmaId, alunoId, formData.disciplina, file.name);
+        const storagePath = generateStoragePath(turmaId, alunoId, formData.disciplina);
         fileUpload = await storageProvider.upload(file, storagePath);
       }
 

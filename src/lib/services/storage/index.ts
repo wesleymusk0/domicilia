@@ -89,10 +89,14 @@ export function getFileExtension(filename: string): string {
 export function generateStoragePath(
   turmaId: string,
   alunoId: string,
-  disciplina: string,
-  filename: string
-): string {
-  const timestamp = Date.now();
-  const ext = getFileExtension(filename);
-  return `envios/${turmaId}/${alunoId}/${disciplina}/${timestamp}.${ext}`;
+  disciplina: string
+) {
+  return [
+    "envios",
+    turmaId,
+    alunoId,
+    disciplina
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+  ].join("/");
 }
