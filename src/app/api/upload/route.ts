@@ -1,60 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const path = formData.get('path') as string;
+
+    const file = formData.get('file') as File | null;
+    const path = formData.get('path') as string | null;
 
     if (!file || !path) {
-      return NextResponse.json({ error: 'Arquivo e path são obrigatórios' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Arquivo e path são obrigatórios.' },
+        { status: 400 }
+      );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const ext = file.name.includes('.')
+      ? file.name.split('.').pop()
+      : '';
 
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Configuração Supabase não encontrada' }, { status: 500 });
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2);
-    const ext = file.name.split('.').pop();
-    const fileName = `${timestamp}-${randomString}.${ext}`;
+    const fileName = `${Date.now()}-${crypto.randomUUID()}${ext ? `.${ext}` : ''}`;
     const fullPath = `${path}/${fileName}`;
 
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/domicilia/${fullPath}`;
+    const { error } = await supabase.storage
+      .from('domicilia')
+      .upload(fullPath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type || 'application/octet-stream',
+      });
 
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-    apikey: supabaseKey,
-    Authorization: `Bearer ${supabaseKey}`,
-    "Content-Type": file.type || "application/octet-stream",
-    "x-upsert": "false",
-},
-      body: Buffer.from(arrayBuffer),
-    });
+    if (error) {
+      console.error('Erro Supabase Upload:', error);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Supabase upload error:', errorText);
-      throw new Error('Falha no upload para Supabase');
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error,
+        },
+        { status: 500 }
+      );
     }
 
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/domicilia/${fullPath}`;
+    const {
+      data: { publicUrl },
+    } = supabase.storage
+      .from('domicilia')
+      .getPublicUrl(fullPath);
 
     return NextResponse.json({
+      success: true,
       url: publicUrl,
       path: fullPath,
       nome: file.name,
       tipo: file.type,
       tamanho: file.size,
     });
-  } catch (error: any) {
-    console.error('Erro no upload:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
+  } catch (err: any) {
+    console.error(err);
+
+    return NextResponse.json(
+      {
+        error: err.message ?? 'Erro interno.',
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -63,33 +78,39 @@ export async function DELETE(request: NextRequest) {
     const { path } = await request.json();
 
     if (!path) {
-      return NextResponse.json({ error: 'Path é obrigatório' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Path é obrigatório.' },
+        { status: 400 }
+      );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const { error } = await supabase.storage
+      .from('domicilia')
+      .remove([path]);
 
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ error: 'Configuração Supabase não encontrada' }, { status: 500 });
+    if (error) {
+      console.error('Erro Supabase Delete:', error);
+
+      return NextResponse.json(
+        {
+          error: error.message,
+          details: error,
+        },
+        { status: 500 }
+      );
     }
 
-    const deleteUrl = `${supabaseUrl}/storage/v1/object/domicilia/${path}`;
-
-    const response = await fetch(deleteUrl, {
-      method: 'DELETE',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
+    return NextResponse.json({
+      success: true,
     });
+  } catch (err: any) {
+    console.error(err);
 
-    if (!response.ok) {
-      console.error('Supabase delete error');
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Erro ao deletar:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: err.message ?? 'Erro interno.',
+      },
+      { status: 500 }
+    );
   }
 }
