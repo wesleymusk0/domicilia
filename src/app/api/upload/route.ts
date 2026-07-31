@@ -29,11 +29,12 @@ export async function POST(request: NextRequest) {
     const response = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': file.type,
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-      },
-      body: arrayBuffer,
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`,
+    "Content-Type": file.type || "application/octet-stream",
+    "x-upsert": "false",
+},
+      body: Buffer.from(arrayBuffer),
     });
 
     if (!response.ok) {
