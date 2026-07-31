@@ -35,6 +35,9 @@ function EnviarAtividadeContent() {
     observacoes: '',
     numAulas: '',
     data: '',
+    quinzena: '1',
+    trimestre: '1',
+    anoLetivo: new Date().getFullYear().toString(),
   });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +152,9 @@ function EnviarAtividadeContent() {
           encaminhamento: formData.encaminhamento || (file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma'),
           roteiro: formData.roteiro || (file ? 'Resolver atividade anexada' : 'Acessar plataforma e realizar atividade'),
           observacoes: formData.observacoes,
+          quinzena: formData.quinzena,
+          trimestre: formData.trimestre,
+          anoLetivo: formData.anoLetivo,
         }),
       });
 
@@ -208,6 +214,37 @@ function EnviarAtividadeContent() {
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Nº de Aulas" value={formData.numAulas} onChange={(e) => setFormData({ ...formData, numAulas: e.target.value })} placeholder="Ex: 4" />
                 <Input label="Quinzena/Data" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} placeholder="Ex: 05/02/2026 a 27/02/2026" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <Select
+                  label="Quinzena"
+                  value={formData.quinzena}
+                  onChange={(e) => setFormData({ ...formData, quinzena: e.target.value })}
+                  options={Array.from({ length: 15 }, (_, i) => ({
+                    value: String(i + 1),
+                    label: `Quinzena ${i + 1}`,
+                  }))}
+                  required
+                />
+                <Select
+                  label="Trimestre"
+                  value={formData.trimestre}
+                  onChange={(e) => setFormData({ ...formData, trimestre: e.target.value })}
+                  options={[
+                    { value: '1', label: '1º Trimestre' },
+                    { value: '2', label: '2º Trimestre' },
+                    { value: '3', label: '3º Trimestre' },
+                  ]}
+                  required
+                />
+                <Input
+                  label="Ano Letivo"
+                  value={formData.anoLetivo}
+                  onChange={(e) => setFormData({ ...formData, anoLetivo: e.target.value })}
+                  placeholder="Ex: 2026"
+                  required
+                />
               </div>
 
               <div className="mt-4">

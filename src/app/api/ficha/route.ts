@@ -5,6 +5,19 @@ import JSZip from 'jszip';
 
 export const runtime = 'nodejs';
 
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const dados = await request.json();
@@ -42,6 +55,50 @@ export async function POST(request: NextRequest) {
 
     // Remove valor antigo do QUINZENA/DATA se existir
     xml = xml.replace(/>05\/02\/2026  a  27\/02\/2026 - <\//g, `>${dados.data}</`);
+
+    // Substitui "FICHA 1:" por "FICHA X:"
+    xml = xml.replace(/>FICHA 1:<\//g, `>FICHA ${dados.quinzena || '1'}:</`);
+
+    // Substitui "2º TRIMESTRE/" por "Xº TRIMESTRE/20YY"
+    const targetString = 'Encaminhamento de conteúdo/atividade Domiciliar - </w:t></w:r><w:r w:rsidR="00894BE8"><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t>2</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t>º TRIMESTRE/</w:t>';
+    const replacementString = `Encaminhamento de conteúdo/atividade Domiciliar - </w:t></w:r><w:r w:rsidR="00894BE8"><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t>${dados.trimestre || '1'}</w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t>º TRIMESTRE/${dados.anoLetivo || '2026'}</w:t>`;
+    xml = xml.replace(targetString, replacementString);
+
+    // Substitui "ROTEIRO DE ESTUDOS" parágrafos vazios
+    const roteiroHeader = 'ROTEIRO DE ESTUDOS</w:t></w:r></w:p>';
+    const roteiroIdx = xml.indexOf(roteiroHeader);
+    if (roteiroIdx !== -1) {
+      const insertStart = roteiroIdx + roteiroHeader.length;
+      const insertEnd = xml.indexOf('</w:tc>', insertStart);
+      if (insertEnd !== -1) {
+        const roteiroText = dados.roteiro || '';
+        const roteiroLines = roteiroText.split('\n').filter((line: string) => line.trim() !== '');
+        if (roteiroLines.length > 0) {
+          const replacementXml = roteiroLines.map((line: string) => {
+            return `<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="141"/><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t>${escapeXml(line)}</w:t></w:r></w:p>`;
+          }).join('');
+          xml = xml.substring(0, insertStart) + replacementXml + xml.substring(insertEnd);
+        }
+      }
+    }
+
+    // Substitui "OBSERVAÇÕES:" parágrafos vazios
+    const obsHeader = 'OBSERVAÇÕES:</w:t></w:r></w:p>';
+    const obsIdx = xml.indexOf(obsHeader);
+    if (obsIdx !== -1) {
+      const insertStart = obsIdx + obsHeader.length;
+      const insertEnd = xml.indexOf('</w:tc>', insertStart);
+      if (insertEnd !== -1) {
+        const obsText = dados.observacoes || '';
+        const obsLines = obsText.split('\n').filter((line: string) => line.trim() !== '');
+        if (obsLines.length > 0) {
+          const replacementXml = obsLines.map((line: string) => {
+            return `<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="141"/><w:jc w:val="both"/><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:eastAsia="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t>${escapeXml(line)}</w:t></w:r></w:p>`;
+          }).join('');
+          xml = xml.substring(0, insertStart) + replacementXml + xml.substring(insertEnd);
+        }
+      }
+    }
 
     zip.file('word/document.xml', xml);
 
