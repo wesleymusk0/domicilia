@@ -13,7 +13,7 @@ import { PageLoading } from '@/components/ui/Loading';
 import { FirestoreService, DOC_TYPES } from '@/lib/services/firestore';
 import { storageProvider, validateFile, generateStoragePath } from '@/lib/services/storage';
 import { emailService } from '@/lib/services/email';
-import { Aluno, Turma, Envio, Historico } from '@/types';
+import { Aluno, Turma, Envio, Historico, User } from '@/types';
 import { getCurrentDate, getCurrentTime } from '@/lib/utils';
 
 function EnviarAtividadeContent() {
@@ -26,6 +26,7 @@ function EnviarAtividadeContent() {
 
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [turma, setTurma] = useState<Turma | null>(null);
+  const [pedagogaNome, setPedagogaNome] = useState('');
   const [formData, setFormData] = useState({
     disciplina: '',
     comentarios: '',
@@ -56,6 +57,12 @@ function EnviarAtividadeContent() {
       ]);
       setAluno(alunoData);
       setTurma(turmaData);
+
+      // Busca nome do pedagogo
+      if (turmaData?.pedagogoId) {
+        const pedagoga = await FirestoreService.getById<User>(turmaData.pedagogoId);
+        if (pedagoga) setPedagogaNome(pedagoga.name);
+      }
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -136,7 +143,7 @@ function EnviarAtividadeContent() {
           disciplina: formData.disciplina,
           aluno: aluno?.nome || '',
           turma: turma?.nome || '',
-          pedagoga: '',
+          pedagoga: pedagogaNome,
           data: formData.data || getCurrentDate(),
           numAulas: formData.numAulas,
           encaminhamento: formData.encaminhamento || (file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma'),
