@@ -76,7 +76,6 @@ class ResendEmailService implements EmailService {
         <li><strong>Data:</strong> ${envio.dataEnvio}</li>
         <li><strong>Hora:</strong> ${envio.horaEnvio}</li>
         <li><strong>Disciplina:</strong> ${envio.disciplina}</li>
-        <li><strong>Versao:</strong> ${envio.versao}</li>
       </ul>
       <p>Atenciosamente,<br>Sistema de Atividades Domiciliares</p>
     `;
