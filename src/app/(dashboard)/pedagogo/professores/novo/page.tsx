@@ -32,7 +32,7 @@ export default function NovoProfessorPage() {
 
   const disciplinasOptions = [
     'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
-    'Inglês', 'Educação Física', 'Artes', 'Música', 'Informática',
+    'Inglês', 'Educação Física', 'Artes', 'Música', 'Informática', 'Educação Digital', 'Educacao Digital'
   ];
 
   useEffect(() => {
