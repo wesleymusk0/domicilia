@@ -32,10 +32,13 @@ export default function NovaTurmaPage() {
     try {
       const data = await FirestoreService.query<User>(DOC_TYPES.USER, [
         whereEqual('role', 'professor'),
-        whereEqual('pedagogoId', user!.id),
         whereEqual('active', true),
       ]);
-      setProfessores(data);
+      const filtered = data.filter((p) =>
+        p.pedagogoId === user!.id ||
+        (p.pedagogoIds || []).includes(user!.id)
+      );
+      setProfessores(filtered);
     } catch (error) {
       console.error('Erro ao carregar professores:', error);
     }

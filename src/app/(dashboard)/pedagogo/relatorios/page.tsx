@@ -33,7 +33,7 @@ export default function RelatoriosPedagogoPage() {
 
   const loadData = async () => {
     try {
-      const [enviosData, turmasData, professoresData] = await Promise.all([
+      const [enviosData, turmasData, allProfessores] = await Promise.all([
         FirestoreService.query<Envio>(DOC_TYPES.ENVIO, [
           whereEqual('pedagogoId', user!.id),
         ]),
@@ -42,9 +42,13 @@ export default function RelatoriosPedagogoPage() {
         ]),
         FirestoreService.query<User>(DOC_TYPES.USER, [
           whereEqual('role', 'professor'),
-          whereEqual('pedagogoId', user!.id),
         ]),
       ]);
+      const professoresData = allProfessores.filter((p) =>
+        p.pedagogoId === user!.id ||
+        (p.pedagogoIds || []).includes(user!.id) ||
+        (p.turmaIds || []).some((tid) => turmasData.some((t) => t.id === tid))
+      );
       setEnvios(enviosData);
       setTurmas(turmasData);
       setProfessores(professoresData);

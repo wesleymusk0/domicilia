@@ -32,15 +32,19 @@ export default function ProfessoresPedagogoPage() {
 
   const loadData = async () => {
     try {
-      const [professoresData, turmasData] = await Promise.all([
+      const [allProfessores, turmasData] = await Promise.all([
         FirestoreService.query<User>(DOC_TYPES.USER, [
           whereEqual('role', 'professor'),
-          whereEqual('pedagogoId', user!.id),
         ]),
         FirestoreService.query<Turma>(DOC_TYPES.TURMA, [
           whereEqual('pedagogoId', user!.id),
         ]),
       ]);
+      const professoresData = allProfessores.filter((p) =>
+        p.pedagogoId === user!.id ||
+        (p.pedagogoIds || []).includes(user!.id) ||
+        (p.turmaIds || []).some((tid) => turmasData.some((t) => t.id === tid))
+      );
       setProfessores(professoresData);
       setTurmas(turmasData);
     } catch (error) {
