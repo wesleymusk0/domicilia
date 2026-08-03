@@ -16,7 +16,7 @@ import { Modal } from '@/components/ui/Modal';
 import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
 import { ConteudoIA } from '@/types';
 
-const disciplinas = ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educacao Digital', 'Educação Digital'];
+const disciplinas = ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educação Digital'];
 const series = ['1 serie', '2 serie', '3 serie', '4 serie', '5 serie', '6 serie', '7 serie', '8 serie', '9 serie', 'Ensino Medio'];
 const niveis = [
   { value: 'facil', label: 'Facil' },
