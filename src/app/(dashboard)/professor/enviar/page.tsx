@@ -30,7 +30,6 @@ function EnviarAtividadeContent() {
   const [formData, setFormData] = useState({
     disciplina: '',
     comentarios: '',
-    encaminhamento: '',
     roteiro: '',
     observacoes: '',
     numAulas: '',
@@ -45,7 +44,7 @@ function EnviarAtividadeContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const disciplinas = user?.disciplinas || ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educação Digital'];
+  const disciplinas = user?.disciplinas || ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educacao Digital', 'Educação Digital'];
 
   useEffect(() => {
     if (!authLoading && user && turmaId && alunoId) loadData();
@@ -149,7 +148,7 @@ function EnviarAtividadeContent() {
           pedagoga: pedagogaNome,
           data: formData.data || getCurrentDate(),
           numAulas: formData.numAulas,
-          encaminhamento: formData.encaminhamento || (file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma'),
+          encaminhamento: file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma',
           roteiro: formData.roteiro || (file ? 'Resolver atividade anexada' : 'Acessar plataforma e realizar atividade'),
           observacoes: formData.observacoes,
           quinzena: formData.quinzena,
@@ -253,11 +252,6 @@ function EnviarAtividadeContent() {
                   placeholder="Ex: 2026"
                   required
                 />
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Encaminhamento</label>
-                <textarea value={formData.encaminhamento} onChange={(e) => setFormData({ ...formData, encaminhamento: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder={file ? 'Descreva o encaminhamento da atividade...' : 'Ex: Acessar plataforma e realizar atividade de fracoes'} />
               </div>
 
               <div className="mt-4">

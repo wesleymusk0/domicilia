@@ -30,7 +30,7 @@ export default function EditarProfessorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const disciplinasOptions = ['Português', 'Matemática', 'Ciências', 'História', 'Geografia', 'Inglês', 'Educação Física', 'Artes', 'Musica', 'Informática', 'Educação Digital'];
+  const disciplinasOptions = ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educacao Digital', 'Educação Digital'];
 
   useEffect(() => {
     if (user) loadData();

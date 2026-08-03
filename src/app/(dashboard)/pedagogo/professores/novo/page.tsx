@@ -30,7 +30,10 @@ export default function NovoProfessorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const disciplinasOptions = ['Português', 'Matemática', 'Ciências', 'História', 'Geografia', 'Inglês', 'Educação Física', 'Artes', 'Musica', 'Informática', 'Educação Digital'];
+  const disciplinasOptions = [
+    'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
+    'Inglês', 'Educação Física', 'Artes', 'Música', 'Informática', 'Educação Digital', 'Educacao Digital'
+  ];
 
   useEffect(() => {
     if (user) loadTurmas();
