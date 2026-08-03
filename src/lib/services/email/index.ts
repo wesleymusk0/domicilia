@@ -94,7 +94,7 @@ class ResendEmailService implements EmailService {
         <li><strong>Disciplina:</strong> ${envio.disciplina}</li>
         <li><strong>Data:</strong> ${envio.dataEnvio}</li>
       </ul>
-      <p>Atenciosamente,<br>${config?.assinaturaEmail || 'Sistema de Atividades Domiciliares'}</p>
+      <p>${config?.assinaturaEmail ? config.assinaturaEmail.replace(/\n/g, '<br>') : 'Atenciosamente,<br>Sistema de Atividades Domiciliares'}</p>
     `;
 
     let destination = config?.emailDestinoNotificacoes || 'domiciliarmaluf@gmail.com';
