@@ -32,7 +32,7 @@ export default function ConfiguracoesAdminPage() {
           textoEmailLembrete: 'Lembrete: Voce possui atividade domiciliar pendente.',
           textoEmailConfirmacao: 'Sua atividade foi enviada com sucesso.',
           assinaturaEmail: 'Atenciosamente,\nSistema de Atividades Domiciliares',
-          emailDestinoNotificacoes: 'provasmaluf@gmail.com', iaHabilitada: false,
+          emailDestinoNotificacoes: 'domiciliarmaluf@gmail.com', iaHabilitada: false,
           iaProvider: 'llm7', iaApiKey: '', iaModelo: 'gpt-3.5-turbo',
           senhaProfessor: 'professor123',
           createdAt: '', updatedAt: '',
