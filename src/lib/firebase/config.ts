@@ -12,8 +12,28 @@ export const firebaseConfig = {
   measurementId: "G-QEH7LEY7ZL"
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+function getFirebaseApp() {
+  if (getApps().length > 0) return getApps()[0];
+  return initializeApp(firebaseConfig);
+}
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app = getFirebaseApp();
+
+let authInstance: any = null;
+let dbInstance: any = null;
+
+try {
+  authInstance = getAuth(app);
+} catch (e) {
+  console.warn('Firebase Auth initialization warning:', e);
+}
+
+try {
+  dbInstance = getFirestore(app);
+} catch (e) {
+  console.warn('Firebase Firestore initialization warning:', e);
+}
+
+export const auth = authInstance;
+export const db = dbInstance;
 export default app;
