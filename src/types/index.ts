@@ -11,6 +11,7 @@ export interface User {
   updatedAt: string;
   active: boolean;
   pedagogoId?: string;
+  pedagogoIds?: string[];
   turmaIds?: string[];
   disciplinas?: string[];
 }

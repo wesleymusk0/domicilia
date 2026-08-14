@@ -30,11 +30,13 @@ function EnviarAtividadeContent() {
   const [formData, setFormData] = useState({
     disciplina: '',
     comentarios: '',
-    encaminhamento: '',
     roteiro: '',
     observacoes: '',
     numAulas: '',
     data: '',
+    quinzena: '1',
+    trimestre: '1',
+    anoLetivo: new Date().getFullYear().toString(),
   });
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ function EnviarAtividadeContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const disciplinas = user?.disciplinas || ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica'];
+  const disciplinas = user?.disciplinas || ['Portugues', 'Matematica', 'Ciencias', 'Historia', 'Geografia', 'Ingles', 'Educacao Fisica', 'Artes', 'Musica', 'Informatica', 'Educacao Digital', 'Educação Digital'];
 
   useEffect(() => {
     if (!authLoading && user && turmaId && alunoId) loadData();
@@ -146,9 +148,12 @@ function EnviarAtividadeContent() {
           pedagoga: pedagogaNome,
           data: formData.data || getCurrentDate(),
           numAulas: formData.numAulas,
-          encaminhamento: formData.encaminhamento || (file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma'),
+          encaminhamento: file ? 'Atividade em anexo' : 'Atividade disponivel na plataforma',
           roteiro: formData.roteiro || (file ? 'Resolver atividade anexada' : 'Acessar plataforma e realizar atividade'),
           observacoes: formData.observacoes,
+          quinzena: formData.quinzena,
+          trimestre: formData.trimestre,
+          anoLetivo: formData.anoLetivo,
         }),
       });
 
@@ -159,6 +164,14 @@ function EnviarAtividadeContent() {
         attachments.push({
           filename: `ficha_${aluno?.nome?.replace(/\s/g, '_')}_${formData.disciplina}.docx`,
           content: fichaBuffer,
+        });
+      }
+
+      if (file) {
+        const fileArrayBuffer = await file.arrayBuffer();
+        attachments.push({
+          filename: file.name,
+          content: Buffer.from(fileArrayBuffer),
         });
       }
 
@@ -210,9 +223,35 @@ function EnviarAtividadeContent() {
                 <Input label="Quinzena/Data" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} placeholder="Ex: 05/02/2026 a 27/02/2026" />
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Encaminhamento</label>
-                <textarea value={formData.encaminhamento} onChange={(e) => setFormData({ ...formData, encaminhamento: e.target.value })} rows={3} className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none" placeholder={file ? 'Descreva o encaminhamento da atividade...' : 'Ex: Acessar plataforma e realizar atividade de fracoes'} />
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <Select
+                  label="Quinzena"
+                  value={formData.quinzena}
+                  onChange={(e) => setFormData({ ...formData, quinzena: e.target.value })}
+                  options={Array.from({ length: 15 }, (_, i) => ({
+                    value: String(i + 1),
+                    label: `Quinzena ${i + 1}`,
+                  }))}
+                  required
+                />
+                <Select
+                  label="Trimestre"
+                  value={formData.trimestre}
+                  onChange={(e) => setFormData({ ...formData, trimestre: e.target.value })}
+                  options={[
+                    { value: '1', label: '1º Trimestre' },
+                    { value: '2', label: '2º Trimestre' },
+                    { value: '3', label: '3º Trimestre' },
+                  ]}
+                  required
+                />
+                <Input
+                  label="Ano Letivo"
+                  value={formData.anoLetivo}
+                  onChange={(e) => setFormData({ ...formData, anoLetivo: e.target.value })}
+                  placeholder="Ex: 2026"
+                  required
+                />
               </div>
 
               <div className="mt-4">

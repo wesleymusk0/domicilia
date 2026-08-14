@@ -1,11 +1,14 @@
+import { initializeApp, deleteApp } from 'firebase/app';
 import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User as FirebaseUser,
   createUserWithEmailAndPassword,
+  getAuth,
+  signOut as secondarySignOut,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth, firebaseConfig } from '@/lib/firebase/config';
 import { FirestoreService, DOC_TYPES, whereEqual } from '@/lib/services/firestore';
 import { User, UserRole } from '@/types';
 
@@ -38,19 +41,34 @@ export class AuthService {
     name: string,
     role: UserRole
   ): Promise<string> {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const firebaseUser = userCredential.user;
+    // Cria um app secundario isolado para nao deslogar o usuario atual no app principal
+    const secondaryApp = initializeApp(firebaseConfig, 'SecondaryAuth_' + Date.now() + Math.random());
+    const secondaryAuth = getAuth(secondaryApp);
 
-    // Cria documento com ID = Firebase Auth UID
-    await FirestoreService.createAtId<User>(firebaseUser.uid, DOC_TYPES.USER, {
-      uid: firebaseUser.uid,
-      email,
-      name,
-      role,
-      active: true,
-    });
+    try {
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+      const firebaseUser = userCredential.user;
 
-    return firebaseUser.uid;
+      // Cria documento com ID = Firebase Auth UID
+      await FirestoreService.createAtId<User>(firebaseUser.uid, DOC_TYPES.USER, {
+        uid: firebaseUser.uid,
+        email,
+        name,
+        role,
+        active: true,
+      });
+
+      const uid = firebaseUser.uid;
+
+      // Limpa e deleta o app secundario
+      await secondarySignOut(secondaryAuth);
+      await deleteApp(secondaryApp);
+
+      return uid;
+    } catch (error) {
+      await deleteApp(secondaryApp).catch(() => {});
+      throw error;
+    }
   }
 
   static async logout(): Promise<void> {

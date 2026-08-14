@@ -36,14 +36,17 @@ export default function EditarTurmaPage() {
 
   const loadData = async () => {
     try {
-      const [turmaData, professoresData] = await Promise.all([
+      const [turmaData, allProfessores] = await Promise.all([
         FirestoreService.getById<Turma>(id),
         FirestoreService.query<User>(DOC_TYPES.USER, [
           whereEqual('role', 'professor'),
-          whereEqual('pedagogoId', user!.id),
           whereEqual('active', true),
         ]),
       ]);
+      const professoresData = allProfessores.filter((p) =>
+        p.pedagogoId === user!.id ||
+        (p.pedagogoIds || []).includes(user!.id)
+      );
 
       if (turmaData) {
         const profIds = turmaData.professorIds || [];

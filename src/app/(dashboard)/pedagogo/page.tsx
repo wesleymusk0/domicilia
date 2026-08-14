@@ -36,10 +36,9 @@ export default function PedagogoDashboard() {
 
   const loadStats = async () => {
     try {
-      const [professores, turmas, alunos, envios] = await Promise.all([
+      const [allProfessores, turmas, alunos, envios] = await Promise.all([
         FirestoreService.query<User>(DOC_TYPES.USER, [
           whereEqual('role', 'professor'),
-          whereEqual('pedagogoId', user!.id),
         ]),
         FirestoreService.query<Turma>(DOC_TYPES.TURMA, [
           whereEqual('pedagogoId', user!.id),
@@ -54,8 +53,14 @@ export default function PedagogoDashboard() {
         ]),
       ]);
 
+      const filteredProfessores = allProfessores.filter((p) =>
+        p.pedagogoId === user!.id ||
+        (p.pedagogoIds || []).includes(user!.id) ||
+        (p.turmaIds || []).some((tid) => turmas.some((t) => t.id === tid))
+      );
+
       setStats({
-        totalProfessores: professores.length,
+        totalProfessores: filteredProfessores.length,
         totalTurmas: turmas.length,
         totalAlunos: alunos.length,
         enviosEnviados: envios.filter((e) => e.status === 'enviado').length,

@@ -32,7 +32,7 @@ export default function NovoProfessorPage() {
 
   const disciplinasOptions = [
     'Português', 'Matemática', 'Ciências', 'História', 'Geografia',
-    'Inglês', 'Educação Física', 'Artes', 'Música', 'Informática',
+    'Inglês', 'Educação Física', 'Artes', 'Música', 'Informática', 'Educação Digital', 'Educacao Digital'
   ];
 
   useEffect(() => {
@@ -57,21 +57,70 @@ export default function NovoProfessorPage() {
     setLoading(true);
 
     try {
-      const tempPassword = formData.password || generateId();
+      // Verifica se professor já existe no banco pelo e-mail
+      const existingUsers = await FirestoreService.query<User>(DOC_TYPES.USER, [
+        whereEqual('email', formData.email),
+      ]);
 
-      const userId = await AuthService.register(
-        formData.email,
-        tempPassword,
-        formData.name,
-        'professor'
-      );
+      let userId: string;
 
-      await FirestoreService.update(userId, {
-        pedagogoId: user!.id,
-        turmaIds: formData.turmaIds,
-        disciplinas: formData.disciplinas,
-      });
+      if (existingUsers.length > 0) {
+        const existingUser = existingUsers[0];
+        if (existingUser.role !== 'professor') {
+          throw new Error('E-mail já cadastrado com outro perfil de usuário.');
+        }
+        userId = existingUser.id;
 
+        // Reutiliza o cadastro: mescla turmas, disciplinas e pedagogos
+        const novasTurmas = Array.from(new Set([...(existingUser.turmaIds || []), ...formData.turmaIds]));
+        const novasDisciplinas = Array.from(new Set([...(existingUser.disciplinas || []), ...formData.disciplinas]));
+        const novosPedagogos = Array.from(new Set([
+          existingUser.pedagogoId,
+          ...(existingUser.pedagogoIds || []),
+          user!.id,
+        ])).filter(Boolean) as string[];
+
+        await FirestoreService.update(userId, {
+          turmaIds: novasTurmas,
+          disciplinas: novasDisciplinas,
+          pedagogoIds: novosPedagogos,
+          active: true, // Garante que o professor esteja ativo
+        });
+      } else {
+        const tempPassword = formData.password || generateId();
+
+        userId = await AuthService.register(
+          formData.email,
+          tempPassword,
+          formData.name,
+          'professor'
+        );
+
+        await FirestoreService.update(userId, {
+          pedagogoId: user!.id,
+          pedagogoIds: [user!.id],
+          turmaIds: formData.turmaIds,
+          disciplinas: formData.disciplinas,
+        });
+
+        // Envia email de boas-vindas apenas para novos
+        await emailService.sendWelcome(
+          {
+            id: userId,
+            uid: userId,
+            type: 'user',
+            email: formData.email,
+            name: formData.name,
+            role: 'professor',
+            active: true,
+            createdAt: '',
+            updatedAt: '',
+          },
+          tempPassword
+        );
+      }
+
+      // Associa o professor às turmas selecionadas
       for (const turmaId of formData.turmaIds) {
         const turma = turmas.find((t) => t.id === turmaId);
         if (turma) {
@@ -84,29 +133,9 @@ export default function NovoProfessorPage() {
         }
       }
 
-      const turmaNames = formData.turmaIds
-        .map((id) => turmas.find((t) => t.id === id)?.nome)
-        .filter(Boolean)
-        .join(', ');
-
-      await emailService.sendWelcome(
-        {
-          id: userId,
-          uid: userId,
-          type: 'user',
-          email: formData.email,
-          name: formData.name,
-          role: 'professor',
-          active: true,
-          createdAt: '',
-          updatedAt: '',
-        },
-        tempPassword
-      );
-
       router.push('/pedagogo/professores');
     } catch (err: any) {
-      setError(err.message || 'Erro ao cadastrar professor');
+      setError(err.message || 'Erro ao cadastrar/reutilizar professor');
     } finally {
       setLoading(false);
     }

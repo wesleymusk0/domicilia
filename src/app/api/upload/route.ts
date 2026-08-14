@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+let supabaseClient: any = null;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+function getSupabase() {
+  if (!supabaseClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder_key';
+    supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return supabaseClient;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const formData = await request.formData();
 
     const file = formData.get('file') as File | null;
@@ -75,6 +82,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const { path } = await request.json();
 
     if (!path) {

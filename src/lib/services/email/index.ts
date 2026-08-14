@@ -76,7 +76,6 @@ class ResendEmailService implements EmailService {
         <li><strong>Data:</strong> ${envio.dataEnvio}</li>
         <li><strong>Hora:</strong> ${envio.horaEnvio}</li>
         <li><strong>Disciplina:</strong> ${envio.disciplina}</li>
-        <li><strong>Versao:</strong> ${envio.versao}</li>
       </ul>
       <p>Atenciosamente,<br>Sistema de Atividades Domiciliares</p>
     `;
@@ -95,10 +94,16 @@ class ResendEmailService implements EmailService {
         <li><strong>Disciplina:</strong> ${envio.disciplina}</li>
         <li><strong>Data:</strong> ${envio.dataEnvio}</li>
       </ul>
-      <p>Atenciosamente,<br>${config?.assinaturaEmail || 'Sistema de Atividades Domiciliares'}</p>
+      <p>${config?.assinaturaEmail ? config.assinaturaEmail.replace(/\n/g, '<br>') : 'Atenciosamente,<br>Sistema de Atividades Domiciliares'}</p>
     `;
+
+    let destination = config?.emailDestinoNotificacoes || 'domiciliarmaluf@gmail.com';
+    if (destination === 'cartoonlandiapr@gmail.com' || destination === 'provasmaluf@gmail.com' || !destination) {
+      destination = 'domiciliarmaluf@gmail.com';
+    }
+
     return this.send(
-      config?.emailDestinoNotificacoes || 'provasmaluf@gmail.com',
+      destination,
       `Atividade Domiciliar - ${envio.alunoNome}`,
       html,
       attachments
