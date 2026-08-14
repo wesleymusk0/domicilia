@@ -2,7 +2,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCDHRBsCdYRh8naxEClHC0sXLHl58SaYAY",
   authDomain: "domicilia-systematrix.firebaseapp.com",
   projectId: "domicilia-systematrix",
